@@ -1,7 +1,15 @@
+from __future__ import annotations
+
 import datetime
+import concurrent
+import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 
 import pandas as pd
 import pytest
+from typing import Tuple
 
 from metricflow.dataflow.sql_table import SqlTable
 from metricflow.protocols.sql_client import SqlClient
@@ -11,6 +19,8 @@ from metricflow.time.time_constants import ISO8601_PYTHON_FORMAT
 from metricflow.time.time_granularity import TimeGranularity
 
 DEFAULT_DS = "ds"
+
+logger = logging.getLogger(__name__)
 
 
 def create_table(sql_client: SqlClient, sql_table: SqlTable, df: pd.DataFrame) -> None:  # noqa: D
@@ -23,17 +33,17 @@ def create_table(sql_client: SqlClient, sql_table: SqlTable, df: pd.DataFrame) -
     )
 
 
-@pytest.fixture(scope="session")
-def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState, sql_client: SqlClient) -> bool:
-    """Creates tables with example source data for testing."""
-    schema = mf_test_session_state.mf_source_schema
+@dataclass(frozen=True)
+class SourceTableDefinition:
+    table_name: str
+    data: pd.DataFrame
 
-    cote_divoire = "cote d'ivoire"
 
+def generate_simple_model_table_definitions(sql_client: SqlClient) -> Tuple[SourceTableDefinition, ...]:
     # NOTE: fct_bookings should have both a host and guest id, but we do not yet
     # have "entity roles" so that a user dimension can be attached to either
     # guest or host (e.g. bookings by user:guest/country)
-    data = [
+    fct_bookings_data = [
         # While datetime columns can be used here, somewhere there is a conversion to a string when testing
         # with sqlite, so when you read the datetime column, it comes out as a string.
         # Columns for reference
@@ -51,34 +61,31 @@ def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState
         ("u0003452", "u0004114", "l5948301", 332.23, False, "2020-01-02", "2020-01-02"),
         ("u0003452", "u0004114", "l5948301", 0.0, False, "2020-01-03", "2020-01-03"),
     ]
-    create_table(
-        sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="fct_bookings"),
-        df=make_df(
+    fct_bookings_table_definition = SourceTableDefinition(
+        table_name="fct_bookings",
+        data=make_df(
             sql_client=sql_client,
             columns=["guest_id", "host_id", "listing_id", "booking_value", "is_instant", DEFAULT_DS, "ds_partitioned"],
             time_columns={DEFAULT_DS, "ds_partitioned"},
-            data=data,
-        ),
+            data=fct_bookings_data,
+        )
     )
 
     # Like fct_bookings, but using dt instead of ds to verify that a primary time dimension named something other than
     # ds can be used.
-    create_table(
-        sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="fct_bookings_dt"),
-        df=make_df(
+    fct_bookings_dt_table_definition = SourceTableDefinition(
+        table_name="fct_bookings_dt",
+        data=make_df(
             sql_client=sql_client,
             columns=["guest_id", "host_id", "listing_id", "booking_value", "is_instant", "dt", "dt_partitioned"],
             time_columns={"dt", "dt_partitioned"},
-            data=data,
+            data=fct_bookings_data,
         ),
     )
 
-    create_table(
-        sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="fct_views"),
-        df=make_df(
+    fct_views_table_definition = SourceTableDefinition(
+        table_name="fct_views",
+        data=make_df(
             sql_client=sql_client,
             columns=["user_id", "listing_id", DEFAULT_DS, "ds_partitioned"],
             time_columns={DEFAULT_DS, "ds_partitioned"},
@@ -92,10 +99,11 @@ def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState
         ),
     )
 
-    create_table(
-        sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="dim_listings_latest"),
-        df=make_df(
+    cote_divoire = "cote d'ivoire"
+
+    dim_listings_latest_table_definition = SourceTableDefinition(
+        table_name="dim_listings_latest",
+        data=make_df(
             sql_client=sql_client,
             columns=["listing_id", "country", "capacity", "is_lux", "user_id", "created_at"],
             time_columns={"created_at"},
@@ -107,10 +115,9 @@ def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState
         ),
     )
 
-    create_table(
-        sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="dim_listings"),
-        df=make_df(
+    dim_listings_table_definition = SourceTableDefinition(
+        table_name="dim_listings",
+        data=make_df(
             sql_client=sql_client,
             columns=["listing_id", "country", "capacity", "is_lux", DEFAULT_DS],
             time_columns={DEFAULT_DS},
@@ -123,10 +130,10 @@ def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState
             ],
         ),
     )
-    create_table(
-        sql_client=sql_client,  # successful identity verifications
-        sql_table=SqlTable(schema_name=schema, table_name="fct_id_verifications"),
-        df=make_df(
+
+    fct_id_verifications_table_definition = SourceTableDefinition(
+        table_name="fct_id_verifications",
+        data=make_df(
             sql_client=sql_client,
             columns=["verification_id", "user_id", "verification_type", DEFAULT_DS, "ds_partitioned"],
             time_columns={DEFAULT_DS, "ds_partitioned"},
@@ -139,10 +146,9 @@ def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState
         ),
     )
 
-    create_table(
-        sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="dim_users"),
-        df=make_df(
+    dim_users_table_definition = SourceTableDefinition(
+        table_name="dim_users",
+        data=make_df(
             sql_client=sql_client,
             columns=["user_id", "home_state", "created_at", DEFAULT_DS, "ds_partitioned"],
             time_columns={"created_at", DEFAULT_DS, "ds_partitioned"},
@@ -163,10 +169,9 @@ def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState
         ),
     )
 
-    create_table(
-        sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="dim_users_latest"),
-        df=make_df(
+    dim_user_latest_table_definition = SourceTableDefinition(
+        table_name="dim_users_latest",
+        data=make_df(
             sql_client=sql_client,
             columns=["user_id", "home_state_latest", DEFAULT_DS],
             time_columns={DEFAULT_DS},
@@ -181,10 +186,9 @@ def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState
         ),
     )
 
-    create_table(
-        sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="fct_revenue"),
-        df=make_df(
+    fct_revenue_table_definition = SourceTableDefinition(
+        table_name="fct_revenue",
+        data=make_df(
             sql_client=sql_client,
             columns=["revenue", "created_at", "user_id"],
             time_columns={"created_at"},
@@ -201,10 +205,9 @@ def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState
         ),
     )
 
-    create_table(
-        sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="dim_lux_listing_id_mapping"),
-        df=make_df(
+    dim_lux_listings_id_mapping_table_definition = SourceTableDefinition(
+        table_name="dim_lux_listing_id_mapping",
+        data=make_df(
             sql_client=sql_client,
             columns=["listing_id", "lux_listing_id"],
             data=[
@@ -214,10 +217,9 @@ def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState
         ),
     )
 
-    create_table(
-        sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="dim_companies"),
-        df=make_df(
+    dim_companies_table_definition = SourceTableDefinition(
+        table_name="dim_companies",
+        data=make_df(
             sql_client=sql_client,
             columns=["company_id", "user_id", "company_name"],
             data=[
@@ -225,6 +227,64 @@ def create_simple_model_tables(mf_test_session_state: MetricFlowTestSessionState
             ],
         ),
     )
+
+    return (
+        fct_bookings_table_definition,
+        fct_bookings_dt_table_definition,
+        fct_views_table_definition,
+        dim_listings_latest_table_definition,
+        dim_listings_table_definition,
+        fct_id_verifications_table_definition,
+        dim_users_table_definition,
+        dim_user_latest_table_definition,
+        fct_revenue_table_definition,
+        dim_lux_listings_id_mapping_table_definition,
+        dim_companies_table_definition,
+    )
+
+
+def create_tables(
+        sql_client: SqlClient, schema_name: str, table_definitions: Tuple[SourceTableDefinition, ...]
+) -> None:
+    if not sql_client.sql_engine_attributes.multi_threading_supported:
+        for table_definition in table_definitions:
+            create_table(
+                sql_client=sql_client,
+                sql_table=SqlTable(schema_name=schema_name, table_name=table_definition.table_name),
+                df=table_definition.data
+            )
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future_to_sql_table = {}
+            for table_definition in table_definitions:
+                sql_table = SqlTable(schema_name=schema_name, table_name=table_definition.table_name)
+                future = executor.submit(
+                    create_table,
+                    sql_client=sql_client,
+                    sql_table=SqlTable(schema_name=schema_name, table_name=table_definition.table_name),
+                    df=table_definition.data,
+                )
+                future_to_sql_table[future] = sql_table
+
+            for future in concurrent.futures.as_completed(future_to_sql_table):
+                future.result()
+                logger.info(f"Successfully created {future_to_sql_table[future].sql}")
+
+
+@pytest.fixture(scope="session")
+def create_simple_model_tables(
+        mf_test_session_state: MetricFlowTestSessionState,
+        sql_client: SqlClient,
+) -> bool:
+    """Creates tables with example source data for testing."""
+
+    start_time = time.time()
+    create_tables(
+        sql_client=sql_client,
+        schema_name=mf_test_session_state.mf_source_schema,
+        table_definitions=generate_simple_model_table_definitions(sql_client)
+    )
+    logger.error(f"Creating tables took {time.time() - start_time:.2f}s")
 
     return True
 
