@@ -37,7 +37,10 @@ class DimensionReference(LinkableElementReference):  # noqa: D
 
 @dataclass(frozen=True)
 class IdentifierReference(LinkableElementReference):  # noqa: D
-    pass
+
+    @property
+    def element_name(self) -> str:
+        raise NotImplementedError
 
 
 @dataclass(frozen=True)
