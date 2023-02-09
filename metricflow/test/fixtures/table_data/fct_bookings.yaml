@@ -1,0 +1,23 @@
+---
+table_name: "fct_bookings"
+column_definitions:
+  - column_name: "guest_id"
+    column_type: STRING
+  - column_name: "host_id"
+    column_type: STRING
+  - column_name: "listing_id"
+    column_type: STRING
+  - column_name: "booking_value"
+    column_type: FLOAT
+  - column_name: "is_instant"
+    column_type: BOOLEAN
+  - column_name: "ds"
+    column_type: TIME
+  - column_name: "ds_partitioned"
+    column_type: TIME
+  - column_name: "booking_paid_at"
+    column_type: TIME
+  - column_name: "referrer_id"
+    column_type: STRING
+table_data:
+  - []
