@@ -4,6 +4,7 @@ from typing import ClassVar, Optional, Mapping, Union, Sequence, Callable
 
 import sqlalchemy
 
+from metricflow.object_utils import pformat_big_objects
 from metricflow.protocols.sql_client import SqlEngine, SqlIsolationLevel
 from metricflow.protocols.sql_client import SqlEngineAttributes
 from metricflow.protocols.sql_request import SqlRequestTagSet
@@ -102,8 +103,22 @@ class RedshiftSqlClient(SqlAlchemySqlClient):
         return RedshiftEngineAttributes()
 
     def cancel_submitted_queries(self) -> None:  # noqa: D
-        for request_id in self.active_requests():
-            self.cancel_request(SqlRequestTagSet.create_from_request_id(request_id))
+        active_request_ids = self.active_requests()
+        logger.info(
+            f"Cancelling request IDs:\n{pformat_big_objects([request_id.id_str for request_id in active_request_ids])}"
+        )
+        # Cancel if a query matches any one of these tag sets
+        tag_sets_to_cancel = tuple(
+            SqlRequestTagSet.create_from_request_id(request_id) for request_id in active_request_ids
+        )
+
+        def _request_filter(combined_tags: CombinedSqlTags) -> bool:
+            for tag_set_to_cancel in tag_sets_to_cancel:
+                if tag_set_to_cancel.is_subset_of(combined_tags.system_tags):
+                    return True
+            return False
+
+        self.cancel_request(_request_filter)
 
     def cancel_request(self, match_function: Callable[[CombinedSqlTags], bool]) -> int:  # noqa: D
         result = self.query(
