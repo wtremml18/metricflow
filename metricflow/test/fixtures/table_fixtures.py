@@ -30,7 +30,7 @@ def create_table(sql_client: SqlClient, sql_table: SqlTable, df: pd.DataFrame) -
 
 
 @pytest.fixture(scope="session")
-def create_source_schema_tables(
+def create_source_tables(
     mf_test_session_state: MetricFlowTestSessionState,
     sql_client: SqlClient,
     source_table_snapshot_repository: SqlTableSnapshotRepository,

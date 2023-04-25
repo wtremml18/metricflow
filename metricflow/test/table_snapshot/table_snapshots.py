@@ -7,7 +7,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Tuple, Sequence, List, Union
+from typing import Tuple, Sequence, List, Union, Optional
 
 import dateutil.parser
 import pandas as pd
@@ -64,7 +64,7 @@ class SqlTableSnapshot(FrozenBaseModel):
 
     name: str
     column_definitions: Tuple[SqlTableColumnDefinition, ...]
-    rows: Tuple[Tuple[str, ...], ...]
+    rows: Tuple[Tuple[Optional[str], ...], ...]
     file_path: Path
 
     @property
@@ -101,10 +101,12 @@ class SqlTableSnapshot(FrozenBaseModel):
 
         type_converted_rows = []
         for row in self.rows:
-            type_converted_row: List[Union[str, datetime.datetime, int, float, bool]] = []
+            type_converted_row: List[Union[str, datetime.datetime, int, float, bool, None]] = []
             for column_num, column_value in enumerate(row):
                 column_type = self.column_definitions[column_num].type
-                if column_type is SqlTableColumnType.STRING:
+                if column_value is None:
+                    type_converted_row.append(None)
+                elif column_type is SqlTableColumnType.STRING:
                     type_converted_row.append(column_value)
                 elif column_type is SqlTableColumnType.TIME:
                     type_converted_row.append(dateutil.parser.parse(column_value))

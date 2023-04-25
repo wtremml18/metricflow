@@ -106,25 +106,38 @@ def test_yaml() -> None:
     """
     create_table(
         sql_client=sql_client,
-        sql_table=SqlTable(schema_name=schema, table_name="dim_companies"),
+        sql_table=SqlTable(schema_name=schema, table_name="fct_accounts"),
         df=make_df(
             sql_client=sql_client,
-            columns=["company_id", "user_id", "company_name"],
-            data=[
-                ("cpid_0", "u0003154", "MD Vacation Rentals LLC"),
-            ],
+            columns=["user_id", "account_balance", DEFAULT_DS, "account_type"],
+            time_columns={DEFAULT_DS},
+            data=accounts_data,
         ),
     )
     """
     DEFAULT_DS = "ds"
     cote_divoire = "cote d'ivoire"
 
-    name = "dim_companies"
-    columns = ["company_id", "user_id", "company_name"]
+    name = "fct_accounts"
+    columns = ["user_id", "account_balance", DEFAULT_DS, "account_type"]
     data = [
-        ("cpid_0", "u0003154", "MD Vacation Rentals LLC"),
+        ("u0004114", 2135, "2020-01-01", "checking"),
+        ("u0004114", 1234, "2020-01-01", "savings"),
+        ("u0005432", 5234, "2020-01-03", "checking"),
+        ("u0005432", 234, "2020-01-03", "savings"),
+        ("u0003141", 24634, "2020-01-01", "checking"),
+        ("u0003154", 23452, "2020-01-01", "checking"),
+        ("u0004114", 1213, "2020-01-06", "savings"),
+        ("u1612112", 5123, "2020-01-02", "checking"),
+        ("u0004114", 523, "2020-01-07", "checking"),
+        ("u0004114", 7434, "2020-01-10", "checkings"),
+        ("u0005432", 8456, "2020-01-02", "savings"),
+        ("u0003141", 12939, "2020-01-12", "checking"),
+        ("u0003452", 6939, "2020-01-02", "checking"),
+        ("u0003452", 35, "2020-01-12", "checking"),
+        ("u0005414", 5582, "2020-01-04", "savings"),
     ]
-    first_columns = ["company_id", "company_name", "user_id"]
+    first_columns = ["ds",]
 
     column_name_to_index: Dict[str, int] = {}
     for i, column_name in enumerate(columns):
@@ -208,3 +221,7 @@ def test_yaml() -> None:
         row_section=row_section,
     )
     logger.error(f"YAML is:\n{rendered_yaml}")
+
+
+def test_create_source_tables(create_source_tables: None) -> None:
+    logger.info(f"Here")
