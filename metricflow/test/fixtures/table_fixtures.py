@@ -1,4 +1,6 @@
 import datetime
+import os
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -7,6 +9,10 @@ from metricflow.dataflow.sql_table import SqlTable
 from metricflow.protocols.sql_client import SqlClient
 from metricflow.sql_clients.sql_utils import make_df
 from metricflow.test.fixtures.setup_fixtures import MetricFlowTestSessionState
+from metricflow.test.table_snapshot.table_snapshots import (
+    SqlTableSnapshotRepository,
+    SqlTableSnapshotRestorer,
+)
 from metricflow.time.time_constants import ISO8601_PYTHON_FORMAT
 from metricflow.time.time_granularity import TimeGranularity
 
@@ -21,6 +27,33 @@ def create_table(sql_client: SqlClient, sql_table: SqlTable, df: pd.DataFrame) -
         sql_table=sql_table,
         df=df,
     )
+
+
+@pytest.fixture(scope="session")
+def create_source_schema_tables(
+    mf_test_session_state: MetricFlowTestSessionState,
+    sql_client: SqlClient,
+    source_table_snapshot_repository: SqlTableSnapshotRepository,
+) -> None:
+    """Creates all tables that should be in the source schema.
+
+    If a table with a given name already exists in the source schema, it's assumed to have the expected schema / data.
+    """
+
+    # Figure out which tables are missing from the source schema.
+    source_schema_table_names = set(sql_client.list_tables(schema_name=mf_test_session_state.mf_source_schema))
+    expected_table_names = set(
+        table_snapshot.name for table_snapshot in source_table_snapshot_repository.table_snapshots
+    )
+    missing_table_names = expected_table_names.difference(source_schema_table_names)
+
+    # Restore the ones that are missing.
+    snapshot_restorer = SqlTableSnapshotRestorer(
+        sql_client=sql_client, schema_name=mf_test_session_state.mf_source_schema
+    )
+    for table_snapshot in source_table_snapshot_repository.table_snapshots:
+        if table_snapshot.name in missing_table_names:
+            snapshot_restorer.restore(table_snapshot)
 
 
 @pytest.fixture(scope="session")
@@ -656,3 +689,8 @@ def create_data_warehouse_validation_model_tables(
     )
 
     return True
+
+
+@pytest.fixture(scope="session")
+def source_table_snapshot_repository() -> SqlTableSnapshotRepository:  # noqa: D
+    return SqlTableSnapshotRepository(Path(os.path.dirname(__file__)).joinpath("source_table_snapshots"))

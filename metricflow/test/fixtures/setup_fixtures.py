@@ -8,6 +8,7 @@ from _pytest.fixtures import FixtureRequest
 
 from metricflow.configuration.env_var import EnvironmentVariable
 from metricflow.object_utils import random_id
+from metricflow.test.table_snapshot.table_snapshots import SqlTableSnapshotRepository
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,10 @@ class MetricFlowTestEnvironmentVariables:
 
 
 @pytest.fixture(scope="session")
-def mf_test_session_state(request: FixtureRequest) -> MetricFlowTestSessionState:  # noqa: D
+def mf_test_session_state(  # noqa: D
+    request: FixtureRequest,
+    source_table_snapshot_repository: SqlTableSnapshotRepository,
+) -> MetricFlowTestSessionState:
     engine_url = MetricFlowTestEnvironmentVariables.MF_SQL_ENGINE_URL.get_optional()
     if engine_url is None:
         logger.info(f"{MetricFlowTestEnvironmentVariables.MF_SQL_ENGINE_URL.name} has not been set, so using DuckDb")
@@ -67,7 +71,7 @@ def mf_test_session_state(request: FixtureRequest) -> MetricFlowTestSessionState
     current_time = datetime.datetime.now().strftime("%Y_%m_%d")
     random_suffix = random_id()
     mf_system_schema = f"mf_test_{current_time}_{random_suffix}"
-    mf_source_schema = mf_system_schema
+    mf_source_schema = source_table_snapshot_repository.source_schema_name
 
     return MetricFlowTestSessionState(
         sql_engine_url=engine_url,

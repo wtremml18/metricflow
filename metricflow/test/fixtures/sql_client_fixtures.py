@@ -1,18 +1,20 @@
 import logging
-
-import pytest
 from typing import Generator
 
+import pytest
+
 from metricflow.protocols.async_sql_client import AsyncSqlClient
-from metricflow.sql_clients.sql_utils import make_sql_client
 from metricflow.protocols.sql_client import SqlClient
+from metricflow.sql_clients.sql_utils import make_sql_client
 from metricflow.test.fixtures.setup_fixtures import MetricFlowTestSessionState
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def async_sql_client(mf_test_session_state: MetricFlowTestSessionState) -> Generator[AsyncSqlClient, None, None]:
+def async_sql_client(
+    mf_test_session_state: MetricFlowTestSessionState,
+) -> Generator[AsyncSqlClient, None, None]:
     """Provides an AsyncSqlClient requiring warehouse access."""
     sql_client = make_sql_client(
         url=mf_test_session_state.sql_engine_url,
