@@ -1,13 +1,13 @@
 import textwrap
 from typing import Optional, Sequence
 
-from metricflow.engine.models import Dimension
 from dbt_semantic_interfaces.objects.common import FileSlice, Metadata, YamlConfigFile
-from dbt_semantic_interfaces.objects.constraints.where import WhereClauseConstraint
 from dbt_semantic_interfaces.objects.data_source import DataSource, DataSourceOrigin, Mutability
 from dbt_semantic_interfaces.objects.elements.entity import Entity
 from dbt_semantic_interfaces.objects.elements.measure import Measure
+from dbt_semantic_interfaces.objects.filters.where_filter import WhereFilter
 from dbt_semantic_interfaces.objects.metric import Metric, MetricType, MetricTypeParams
+from metricflow.engine.models import Dimension
 
 
 def base_model_file() -> YamlConfigFile:
@@ -60,7 +60,7 @@ def metric_with_guaranteed_meta(
     name: str,
     type: MetricType,
     type_params: MetricTypeParams,
-    constraint: Optional[WhereClauseConstraint] = None,
+    constraint: Optional[WhereFilter] = None,
     metadata: Metadata = default_meta(),
     description: str = "adhoc metric",
 ) -> Metric:
@@ -84,9 +84,9 @@ def data_source_with_guaranteed_meta(
     sql_query: Optional[str] = None,
     dbt_model: Optional[str] = None,
     metadata: Metadata = default_meta(),
-    identifiers: Sequence[Entity] = [],
-    measures: Sequence[Measure] = [],
-    dimensions: Sequence[Dimension] = [],
+    identifiers: Sequence[Entity] = (),
+    measures: Sequence[Measure] = (),
+    dimensions: Sequence[Dimension] = (),
     origin: DataSourceOrigin = DataSourceOrigin.SOURCE,
 ) -> DataSource:
     """Creates a data source with the given input. If a metadata object is not supplied, a default metadata object is used"""
