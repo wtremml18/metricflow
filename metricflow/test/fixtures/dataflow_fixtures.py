@@ -6,6 +6,7 @@ from metricflow.dataflow.builder.costing import DefaultCostFunction
 from metricflow.dataflow.builder.dataflow_plan_builder import DataflowPlanBuilder
 from metricflow.dataset.data_source_adapter import DataSourceDataSet
 from metricflow.model.semantic_model import SemanticModel
+from metricflow.plan_conversion.column_resolver import DefaultColumnAssociationResolver
 from metricflow.plan_conversion.time_spine import TimeSpineSource, TimeSpineTableBuilder
 from metricflow.protocols.sql_client import SqlClient
 from metricflow.test.fixtures.model_fixtures import ConsistentIdObjectRepository
@@ -32,6 +33,11 @@ def composite_dataflow_plan_builder(  # noqa: D
         cost_function=DefaultCostFunction[DataSourceDataSet](),
         time_spine_source=time_spine_source,
     )
+
+
+@pytest.fixture
+def column_association_resolver(simple_semantic_model: SemanticModel) -> ColumnAssociationResolver:  # noqa: D
+    return DefaultColumnAssociationResolver(simple_semantic_model)
 
 
 @pytest.fixture
