@@ -5,6 +5,8 @@ from typing import Generic
 
 from _pytest.fixtures import FixtureRequest
 
+from dbt_semantic_interfaces.objects.filters.where_filter import WhereFilter
+from dbt_semantic_interfaces.objects.time_granularity import TimeGranularity
 from metricflow.dataflow.builder.dataflow_plan_builder import DataflowPlanBuilder
 from metricflow.dataflow.dataflow_plan import (
     SourceDataSetT,
@@ -32,19 +34,17 @@ from metricflow.dataflow.dataflow_plan_to_text import dataflow_plan_as_text
 from metricflow.dataflow.optimizer.source_scan.source_scan_optimizer import SourceScanOptimizer
 from metricflow.dataset.data_source_adapter import DataSourceDataSet
 from metricflow.dataset.dataset import DataSet
+from metricflow.model.resolved_where_filter import ResolvedWhereFilter
 from metricflow.specs import (
     DimensionSpec,
     EntityReference,
-    LinkableSpecSet,
     MetricFlowQuerySpec,
     MetricSpec,
-    SpecWhereClauseConstraint,
+    ColumnAssociationResolver,
 )
-from metricflow.sql.sql_bind_parameters import SqlBindParameters
 from metricflow.test.dataflow_plan_to_svg import display_graph_if_requested
 from metricflow.test.fixtures.setup_fixtures import MetricFlowTestSessionState
 from metricflow.test.plan_utils import assert_plan_snapshot_text_equal
-from dbt_semantic_interfaces.objects.time_granularity import TimeGranularity
 
 logger = logging.getLogger(__name__)
 
@@ -227,6 +227,7 @@ def test_3_metrics_from_2_data_sources(  # noqa: D
 def test_constrained_metric_not_combined(  # noqa: D
     request: FixtureRequest,
     mf_test_session_state: MetricFlowTestSessionState,
+    column_association_resolver: ColumnAssociationResolver,
     dataflow_plan_builder: DataflowPlanBuilder[DataSourceDataSet],
 ) -> None:
     """Tests that 2 metrics from the same data source but where 1 is constrained results in 2 scans.
@@ -242,18 +243,9 @@ def test_constrained_metric_not_combined(  # noqa: D
                 MetricSpec(element_name="booking_value"),
                 MetricSpec(
                     element_name="instant_booking_value",
-                    constraint=SpecWhereClauseConstraint(
-                        where_condition="is_instant",
-                        linkable_names=("is_instant",),
-                        linkable_spec_set=LinkableSpecSet(
-                            dimension_specs=(
-                                DimensionSpec(
-                                    element_name="is_instant",
-                                    entity_links=(),
-                                ),
-                            )
-                        ),
-                        execution_parameters=SqlBindParameters(),
+                    constraint=ResolvedWhereFilter.create_from_where_filter(
+                        where_filter=WhereFilter(where_sql_template="{{ dimension('is_instant') }} "),
+                        column_association_resolver=column_association_resolver,
                     ),
                 ),
             ),

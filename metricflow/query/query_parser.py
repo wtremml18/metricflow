@@ -6,7 +6,6 @@ import time
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Dict, Sequence
 
-from dbt_semantic_interfaces.objects.constraints.where import WhereClauseConstraint
 from dbt_semantic_interfaces.objects.elements.dimension import DimensionType
 from dbt_semantic_interfaces.objects.filters.where_filter import WhereFilter
 from dbt_semantic_interfaces.objects.metric import MetricType
@@ -25,7 +24,6 @@ from metricflow.dataset.dataset import DataSet
 from metricflow.errors.errors import UnableToSatisfyQueryError
 from metricflow.model.resolved_where_filter import ResolvedWhereFilter
 from metricflow.model.semantic_model import SemanticModel
-from metricflow.model.spec_converters import WhereConstraintConverter
 from metricflow.naming.linkable_spec_name import StructuredLinkableSpecName
 from metricflow.object_utils import pformat_big_objects
 from metricflow.query.query_exceptions import InvalidQueryException
@@ -38,7 +36,6 @@ from metricflow.specs import (
     LinkableInstanceSpec,
     OrderBySpec,
     OutputColumnNameOverride,
-    SpecWhereClauseConstraint,
     LinkableSpecSet,
     ColumnAssociationResolver,
 )
@@ -267,11 +264,12 @@ class MetricFlowQueryParser:
         metric_specs = []
         for metric_reference in metric_references:
             metric = self._metric_semantics.get_metric(metric_reference)
-            metric_where_constraint: Optional[SpecWhereClauseConstraint] = None
+            metric_where_constraint: Optional[ResolvedWhereFilter] = None
             if metric.constraint:
                 # add constraint to MetricSpec
-                metric_where_constraint = WhereConstraintConverter.convert_to_spec_where_constraint(
-                    self._data_source_semantics, metric.constraint
+                metric_where_constraint = ResolvedWhereFilter.create_from_where_filter(
+                    where_filter=metric.constraint,
+                    column_association_resolver=self._column_association_resolver,
                 )
             # TODO: Directly initializing Spec object instead of using a factory method since
             #       importing WhereConstraintConverter is a problem in specs.py
@@ -299,11 +297,11 @@ class MetricFlowQueryParser:
             where_constraint and where_constraint_str
         ), "Both where_constraint and where_constraint_str should not be set"
 
-        parsed_where_constraint: Optional[WhereFilter]
+        where_filter: Optional[WhereFilter]
         if where_constraint_str:
-            parsed_where_constraint = WhereFilter(where_sql_template=where_constraint_str)
+            where_filter = WhereFilter(where_sql_template=where_constraint_str)
         else:
-            parsed_where_constraint = where_constraint
+            where_filter = where_constraint
 
         # Get metric references used for validations
         # In a case of derived metric, all the input metrics would be here.
@@ -453,16 +451,15 @@ class MetricFlowQueryParser:
         if limit is not None and limit < 0:
             raise InvalidQueryException(f"Limit was specified as {limit}, which is < 0.")
 
-        spec_where_constraint: Optional[SpecWhereClauseConstraint] = None
-        if parsed_where_constraint:
-            spec_where_constraint = WhereConstraintConverter.convert_to_spec_where_constraint(
-                data_source_semantics=self._data_source_semantics,
-                where_constraint=parsed_where_constraint,
+        spec_where_constraint: Optional[ResolvedWhereFilter] = None
+        if where_filter:
+            resolved_where_filter = ResolvedWhereFilter.create_from_where_filter(
+                where_filter=where_filter,
+                column_association_resolver=self._column_association_resolver,
             )
-            where_time_specs = spec_where_constraint.linkable_spec_set.time_dimension_specs
-
             self._time_granularity_solver.validate_time_granularity(
-                metric_references=metric_references, time_dimension_specs=where_time_specs
+                metric_references=metric_references,
+                time_dimension_specs=resolved_where_filter.linkable_spec_set.time_dimension_specs,
             )
 
         base_metric_references = self._parse_metric_names(metric_names, traverse_metric_inputs=False)

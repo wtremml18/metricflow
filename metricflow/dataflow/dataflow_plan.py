@@ -11,6 +11,8 @@ from typing import List, TypeVar, Generic, Optional, Sequence, Tuple, Union, Typ
 import jinja2
 
 from dbt_semantic_interfaces.objects.aggregation_type import AggregationType
+from dbt_semantic_interfaces.objects.metric import MetricTimeWindow
+from dbt_semantic_interfaces.objects.time_granularity import TimeGranularity
 from dbt_semantic_interfaces.references import TimeDimensionReference
 from metricflow.constraints.time_constraint import TimeRangeConstraint
 from metricflow.dag.id_generation import (
@@ -37,7 +39,7 @@ from metricflow.dataflow.builder.partitions import (
 )
 from metricflow.dataflow.sql_table import SqlTable
 from metricflow.dataset.dataset import DataSet
-from dbt_semantic_interfaces.objects.metric import MetricTimeWindow
+from metricflow.model.resolved_where_filter import ResolvedWhereFilter
 from metricflow.object_utils import pformat_big_objects
 from metricflow.specs import (
     MetricInputMeasureSpec,
@@ -45,11 +47,9 @@ from metricflow.specs import (
     MetricSpec,
     LinklessEntitySpec,
     TimeDimensionSpec,
-    SpecWhereClauseConstraint,
     InstanceSpecSet,
 )
 from metricflow.sql.sql_plan import SqlJoinType
-from dbt_semantic_interfaces.objects.time_granularity import TimeGranularity
 from metricflow.visitor import Visitable, VisitorOutputT
 
 logger = logging.getLogger(__name__)
@@ -1190,7 +1190,7 @@ class WhereConstraintNode(AggregatedMeasuresOutput[SourceDataSetT]):
     def __init__(  # noqa: D
         self,
         parent_node: BaseOutput[SourceDataSetT],
-        where_constraint: SpecWhereClauseConstraint,
+        where_constraint: ResolvedWhereFilter,
     ) -> None:
         self._where = where_constraint
         self.parent_node = parent_node
@@ -1201,7 +1201,7 @@ class WhereConstraintNode(AggregatedMeasuresOutput[SourceDataSetT]):
         return DATAFLOW_NODE_WHERE_CONSTRAINT_ID_PREFIX
 
     @property
-    def where(self) -> SpecWhereClauseConstraint:
+    def where(self) -> ResolvedWhereFilter:
         """Returns the specs for the elements that it should pass."""
         return self._where
 
