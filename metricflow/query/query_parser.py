@@ -6,21 +6,22 @@ import time
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Dict, Sequence
 
-from metricflow.constraints.time_constraint import TimeRangeConstraint
-from metricflow.dataflow.builder.node_data_set import DataflowPlanNodeOutputDataSetResolver
-from metricflow.dataflow.dataflow_plan import BaseOutput
-from metricflow.dataset.data_source_adapter import DataSourceDataSet
-from metricflow.dataset.dataset import DataSet
-from metricflow.errors.errors import UnableToSatisfyQueryError
 from dbt_semantic_interfaces.objects.constraints.where import WhereClauseConstraint
 from dbt_semantic_interfaces.objects.elements.dimension import DimensionType
 from dbt_semantic_interfaces.objects.metric import MetricType
+from dbt_semantic_interfaces.objects.time_granularity import TimeGranularity
 from dbt_semantic_interfaces.references import (
     DimensionReference,
     EntityReference,
     MetricReference,
     TimeDimensionReference,
 )
+from metricflow.constraints.time_constraint import TimeRangeConstraint
+from metricflow.dataflow.builder.node_data_set import DataflowPlanNodeOutputDataSetResolver
+from metricflow.dataflow.dataflow_plan import BaseOutput
+from metricflow.dataset.data_source_adapter import DataSourceDataSet
+from metricflow.dataset.dataset import DataSet
+from metricflow.errors.errors import UnableToSatisfyQueryError
 from metricflow.model.semantic_model import SemanticModel
 from metricflow.model.spec_converters import WhereConstraintConverter
 from metricflow.naming.linkable_spec_name import StructuredLinkableSpecName
@@ -38,7 +39,6 @@ from metricflow.specs import (
     SpecWhereClauseConstraint,
     LinkableSpecSet,
 )
-from dbt_semantic_interfaces.objects.time_granularity import TimeGranularity
 from metricflow.time.time_granularity_solver import (
     TimeGranularitySolver,
     PartialTimeDimensionSpec,
@@ -55,13 +55,43 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class LinkableInstanceSpecs:
-    """All linkable specs."""
+class QueryTimeLinkableSpecSet:
+    """Linkable specs that are specified at query time.
+
+    This is different from LinkableSpecSet in that it allows for partially specified time dimensions. e.g. in a query,
+    metric_time might be specified without a granularity suffix, but means the lowest possible time granularity.
+    """
 
     dimension_specs: Tuple[DimensionSpec, ...]
     time_dimension_specs: Tuple[TimeDimensionSpec, ...]
     partial_time_dimension_specs: Tuple[PartialTimeDimensionSpec, ...]
     entity_specs: Tuple[EntitySpec, ...]
+
+    @staticmethod
+    def create_from_linkable_spec_set(linkable_spec_set: LinkableSpecSet) -> QueryTimeLinkableSpecSet:  # noqa: D
+        return QueryTimeLinkableSpecSet(
+            dimension_specs=linkable_spec_set.dimension_specs,
+            time_dimension_specs=linkable_spec_set.time_dimension_specs,
+            partial_time_dimension_specs=(),
+            entity_specs=linkable_spec_set.entity_specs,
+        )
+
+    @staticmethod
+    def combine(spec_sets: Sequence[QueryTimeLinkableSpecSet]) -> QueryTimeLinkableSpecSet:  # noqa: D
+        return QueryTimeLinkableSpecSet(
+            dimension_specs=tuple(
+                dimension_spec for spec_set in spec_sets for dimension_spec in spec_set.dimension_specs
+            ),
+            time_dimension_specs=tuple(
+                time_dimension_spec for spec_set in spec_sets for time_dimension_spec in spec_set.time_dimension_specs
+            ),
+            partial_time_dimension_specs=tuple(
+                partial_time_dimension_spec
+                for spec_set in spec_sets
+                for partial_time_dimension_spec in spec_set.partial_time_dimension_specs
+            ),
+            entity_specs=tuple(entity_spec for spec_set in spec_sets for entity_spec in spec_set.entity_specs),
+        )
 
 
 class MetricFlowQueryParser:
@@ -187,7 +217,7 @@ class MetricFlowQueryParser:
     def _validate_linkable_specs(
         self,
         metric_references: Tuple[MetricReference, ...],
-        all_linkable_specs: LinkableInstanceSpecs,
+        all_linkable_specs: QueryTimeLinkableSpecSet,
         time_dimension_specs: Tuple[TimeDimensionSpec, ...],
     ) -> None:
         invalid_group_bys = self._get_invalid_linkable_specs(
@@ -564,7 +594,7 @@ class MetricFlowQueryParser:
 
     def _parse_linkable_element_names(
         self, qualified_linkable_names: Sequence[str], metric_references: Sequence[MetricReference]
-    ) -> LinkableInstanceSpecs:
+    ) -> QueryTimeLinkableSpecSet:
         """Convert the linkable spec names into the respective specification objects."""
 
         qualified_linkable_names = [x.lower() for x in qualified_linkable_names]
@@ -617,7 +647,7 @@ class MetricFlowQueryParser:
                     context=suggestions,
                 )
 
-        return LinkableInstanceSpecs(
+        return QueryTimeLinkableSpecSet(
             dimension_specs=tuple(dimension_specs),
             time_dimension_specs=tuple(time_dimension_specs),
             partial_time_dimension_specs=tuple(partial_time_dimension_specs),
