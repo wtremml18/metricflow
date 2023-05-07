@@ -563,7 +563,7 @@ class LinkableSpecSet(SerializableDataclass):
         return set(self.as_tuple).issubset(set(other_set.as_tuple))
 
     @property
-    def as_instance_set(self) -> InstanceSpecSet:  # noqa: D
+    def as_spec_set(self) -> InstanceSpecSet:  # noqa: D
         return InstanceSpecSet(
             dimension_specs=self.dimension_specs,
             time_dimension_specs=self.time_dimension_specs,
@@ -722,7 +722,7 @@ class InstanceSpecSet(SerializableDataclass):
 
     @staticmethod
     def create_from_linkable_specs(linkable_specs: Sequence[LinkableInstanceSpec]) -> InstanceSpecSet:  # noqa: D
-        return InstanceSpecSet.merge(tuple(x.as_linkable_spec_set.as_instance_set for x in linkable_specs))
+        return InstanceSpecSet.merge(tuple(x.as_linkable_spec_set.as_spec_set for x in linkable_specs))
 
 
 @dataclass(frozen=True)
