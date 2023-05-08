@@ -219,7 +219,7 @@ def test_filter_with_where_constraint_node(  # noqa: D
         parent_node=filter_node,
         where_constraint=ResolvedWhereFilter.create_from_where_filter(
             where_filter=WhereFilter(
-                where_sql_template="{{ time_dimension('ds') }} = '2020-01-01'",
+                where_sql_template="{{ time_dimension('ds', 'day') }} = '2020-01-01'",
             ),
             column_association_resolver=column_association_resolver,
         ),
@@ -955,7 +955,7 @@ def test_filter_with_where_constraint_on_join_dim(
             ),
             where_constraint=ResolvedWhereFilter.create_from_where_filter(
                 where_filter=WhereFilter(
-                    where_sql_template="{{ dimension('country_latest', entity_path=['listing'] }} = 'us'",
+                    where_sql_template="{{ dimension('country_latest', entity_path=['listing']) }} = 'us'",
                 ),
                 column_association_resolver=column_association_resolver,
             ),
@@ -1622,7 +1622,7 @@ def test_join_to_scd_dimension(
                     element_name="family_bookings",
                     constraint=ResolvedWhereFilter.create_from_where_filter(
                         where_filter=WhereFilter(
-                            where_sql_template="{{ dimension('capacity', entity_path=['listing'] }} > 2",
+                            where_sql_template="{{ dimension('capacity', entity_path=['listing']) }} > 2",
                         ),
                         column_association_resolver=column_association_resolver,
                     ),

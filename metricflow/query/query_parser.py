@@ -22,7 +22,6 @@ from metricflow.dataflow.dataflow_plan import BaseOutput
 from metricflow.dataset.data_source_adapter import DataSourceDataSet
 from metricflow.dataset.dataset import DataSet
 from metricflow.errors.errors import UnableToSatisfyQueryError
-from metricflow.model.resolved_where_filter import ResolvedWhereFilter
 from metricflow.model.semantic_model import SemanticModel
 from metricflow.naming.linkable_spec_name import StructuredLinkableSpecName
 from metricflow.object_utils import pformat_big_objects
@@ -37,7 +36,7 @@ from metricflow.specs import (
     OrderBySpec,
     OutputColumnNameOverride,
     LinkableSpecSet,
-    ColumnAssociationResolver,
+    ColumnAssociationResolver, ResolvedWhereFilter,
 )
 from metricflow.time.time_granularity_solver import (
     TimeGranularitySolver,
@@ -359,10 +358,6 @@ class MetricFlowQueryParser:
             )
         )
 
-        # all_group_by_names = list(group_by_names)
-        # if parsed_where_constraint is not None:
-        #     all_group_by_names += parsed_where_constraint.linkable_names
-
         time_dimension_specs = requested_linkable_specs.time_dimension_specs + tuple(
             time_dimension_spec for _, time_dimension_spec in partial_time_dimension_spec_replacements.items()
         )
@@ -373,10 +368,13 @@ class MetricFlowQueryParser:
 
         order_by_specs = self._parse_order_by(order or [], partial_time_dimension_spec_replacements)
 
+        # For each metric, verify that it's possible to retrieve all group by elements, including the ones as required
+        # by the filters.
+        # TODO: Consider moving this logic into _validate_linkable_specs().
         for metric_reference in metric_references:
             metric = self._metric_semantics.get_metric(metric_reference)
             if metric.constraint is not None:
-                query_time_specs = self._parse_linkable_element_names(
+                group_by_specs_for_one_metric = self._parse_linkable_element_names(
                     qualified_linkable_names=group_by_names,
                     metric_references=(metric_reference,),
                 )
@@ -387,7 +385,7 @@ class MetricFlowQueryParser:
                     metric_references=(metric_reference,),
                     all_linkable_specs=QueryTimeLinkableSpecSet.combine(
                         (
-                            query_time_specs,
+                            group_by_specs_for_one_metric,
                             QueryTimeLinkableSpecSet.create_from_linkable_spec_set(
                                 ResolvedWhereFilter.create_from_where_filter(
                                     where_filter=metric.constraint,
@@ -398,13 +396,30 @@ class MetricFlowQueryParser:
                     ),
                     time_dimension_specs=time_dimension_specs,
                 )
-        specs_from_query = self._parse_linkable_element_names(
+
+        # Validate all of them together.
+        group_by_specs = self._parse_linkable_element_names(
             qualified_linkable_names=group_by_names,
             metric_references=metric_references,
         )
+        group_by_specs_with_where_filter_specs = QueryTimeLinkableSpecSet.combine(
+            (group_by_specs,) +
+            (
+                (
+                    QueryTimeLinkableSpecSet.create_from_linkable_spec_set(
+                        ResolvedWhereFilter.create_from_where_filter(
+                            where_filter=where_filter,
+                            column_association_resolver=self._column_association_resolver,
+                        ).linkable_spec_set
+                    ),
+                )
+                if where_filter is not None
+                else ()
+            )
+        )
         self._validate_linkable_specs(
             metric_references=metric_references,
-            all_linkable_specs=specs_from_query,
+            all_linkable_specs=group_by_specs_with_where_filter_specs,
             time_dimension_specs=time_dimension_specs,
         )
 

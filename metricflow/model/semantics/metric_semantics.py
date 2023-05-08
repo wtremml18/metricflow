@@ -5,7 +5,6 @@ from dbt_semantic_interfaces.objects.metric import Metric, MetricType
 from dbt_semantic_interfaces.objects.user_configured_model import UserConfiguredModel
 from dbt_semantic_interfaces.references import MetricReference
 from metricflow.errors.errors import MetricNotFoundError, DuplicateMetricError, NonExistentMeasureError
-from metricflow.model.resolved_where_filter import ResolvedWhereFilter
 from metricflow.model.semantics.data_source_join_evaluator import MAX_JOIN_HOPS
 from metricflow.model.semantics.data_source_semantics import DataSourceSemantics
 from metricflow.model.semantics.linkable_element_properties import LinkableElementProperties
@@ -16,7 +15,7 @@ from metricflow.specs import (
     LinkableInstanceSpec,
     MetricInputMeasureSpec,
     MeasureSpec,
-    ColumnAssociationResolver,
+    ColumnAssociationResolver, ResolvedWhereFilter,
 )
 
 logger = logging.getLogger(__name__)
