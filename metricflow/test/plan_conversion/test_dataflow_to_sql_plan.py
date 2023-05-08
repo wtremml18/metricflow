@@ -46,7 +46,8 @@ from metricflow.specs import (
     OrderBySpec,
     TimeDimensionSpec,
     InstanceSpecSet,
-    ColumnAssociationResolver, ResolvedWhereFilter,
+    ColumnAssociationResolver,
+    ResolvedWhereFilter,
 )
 from metricflow.sql.optimizer.optimization_levels import SqlQueryOptimizationLevel
 from metricflow.test.dataflow_plan_to_svg import display_graph_if_requested

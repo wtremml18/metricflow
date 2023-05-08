@@ -15,7 +15,8 @@ from metricflow.specs import (
     LinkableInstanceSpec,
     MetricInputMeasureSpec,
     MeasureSpec,
-    ColumnAssociationResolver, ResolvedWhereFilter,
+    ColumnAssociationResolver,
+    ResolvedWhereFilter,
 )
 
 logger = logging.getLogger(__name__)

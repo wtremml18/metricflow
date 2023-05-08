@@ -46,7 +46,8 @@ from metricflow.specs import (
     MetricSpec,
     LinklessEntitySpec,
     TimeDimensionSpec,
-    InstanceSpecSet, ResolvedWhereFilter,
+    InstanceSpecSet,
+    ResolvedWhereFilter,
 )
 from metricflow.sql.sql_plan import SqlJoinType
 from metricflow.visitor import Visitable, VisitorOutputT

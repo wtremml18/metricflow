@@ -15,7 +15,8 @@ from metricflow.specs import (
     MetricSpec,
     DimensionSpec,
     EntityReference,
-    ColumnAssociationResolver, ResolvedWhereFilter,
+    ColumnAssociationResolver,
+    ResolvedWhereFilter,
 )
 from metricflow.specs import (
     OrderBySpec,

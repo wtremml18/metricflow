@@ -39,7 +39,8 @@ from metricflow.specs import (
     EntityReference,
     MetricFlowQuerySpec,
     MetricSpec,
-    ColumnAssociationResolver, ResolvedWhereFilter,
+    ColumnAssociationResolver,
+    ResolvedWhereFilter,
 )
 from metricflow.test.dataflow_plan_to_svg import display_graph_if_requested
 from metricflow.test.fixtures.setup_fixtures import MetricFlowTestSessionState
