@@ -151,15 +151,13 @@ class CheckQueryHelpers:
         return f"{{{{ dimension('{dimension_name}', entity_path={repr(entity_path)}) }}}}"
 
     def render_entity_template(self, entity_name: str, entity_path: Sequence[str] = ()) -> str:
-        """Similar to render_dimension_template() but for entities.
-        """
+        """Similar to render_dimension_template() but for entities."""
         return f"{{{{ entity('{entity_name}', entity_path={repr(entity_path)}) }}}}"
 
     def render_time_dimension_template(
-            self, time_dimension_name: str, time_granularity: str, entity_path: Sequence[str] = ()
+        self, time_dimension_name: str, time_granularity: str, entity_path: Sequence[str] = ()
     ) -> str:
-        """Similar to render_dimension_template() but for time dimensions.
-        """
+        """Similar to render_dimension_template() but for time dimensions."""
         return (
             f"{{{{ time_dimension('{time_dimension_name}', '{time_granularity}', entity_path={repr(entity_path)}) }}}}"
         )
