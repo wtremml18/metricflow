@@ -133,8 +133,8 @@ def create_data_sets(
     """
     # Use ordered dict and sort by name to get consistency when running tests.
     data_sets = OrderedDict()
-    semantic_models: List[SemanticModel] = multihop_semantic_manifest_lookup.semantic_manifest.semantic_models
-    semantic_models.sort(key=lambda x: x.name)
+    semantic_models: Sequence[SemanticModel] = multihop_semantic_manifest_lookup.semantic_manifest.semantic_models
+    semantic_models = sorted(semantic_models, key=lambda x: x.name)
 
     converter = SemanticModelToDataSetConverter(
         column_association_resolver=DunderColumnAssociationResolver(multihop_semantic_manifest_lookup)
@@ -205,8 +205,9 @@ def simple_model__with_primary_transforms(template_mapping: Dict[str, str]) -> S
         template_mapping=template_mapping,
         apply_transformations=False,
     )
-    transformed_model = PydanticSemanticManifestTransformer.transform(
-        model=model_build_result.model, ordered_rule_sequences=(PydanticSemanticManifestTransformRuleSet.primary_rules,)
+    transformed_model = PydanticSemanticManifestTransformer().transform(
+        model=model_build_result.model,
+        ordered_rule_sequences=((PydanticSemanticManifestTransformRuleSet().primary_rules,),),
     )
     return transformed_model
 
@@ -230,7 +231,7 @@ def scd_semantic_manifest_lookup(template_mapping: Dict[str, str]) -> SemanticMa
 
 
 @pytest.fixture(scope="session")
-def data_warehouse_validation_model(template_mapping: Dict[str, str]) -> SemanticManifest:
+def data_warehouse_validation_model(template_mapping: Dict[str, str]) -> PydanticSemanticManifest:
     """Model used for data warehouse validation tests."""
     model_build_result = parse_directory_of_yaml_files_to_model(
         os.path.join(os.path.dirname(__file__), "model_yamls/data_warehouse_validation_model"),

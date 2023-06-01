@@ -11,6 +11,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, FrozenSet, Optional, Sequence, Set
 
+from dbt_semantic_interfaces.implementations.semantic_model import PydanticSemanticModel
 from dbt_semantic_interfaces.protocols.dimension import Dimension
 from dbt_semantic_interfaces.protocols.entity import Entity
 from dbt_semantic_interfaces.protocols.measure import Measure
@@ -102,7 +103,7 @@ class SemanticModelAccessor(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_by_reference(self, semantic_model_reference: SemanticModelReference) -> Optional[SemanticModel]:
+    def get_by_reference(self, semantic_model_reference: SemanticModelReference) -> Optional[PydanticSemanticModel]:
         """Retrieve the semantic model object matching the input semantic model reference, if any."""
         raise NotImplementedError
 
