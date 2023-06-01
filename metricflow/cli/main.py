@@ -689,9 +689,7 @@ def validate_configs(
 
     dw_results = SemanticManifestValidationResults()
     if not skip_dw:
-        dw_validator = DataWarehouseSemanticManifestValidator[PydanticSemanticManifest](
-            sql_client=cfg.sql_client, system_schema=cfg.mf_system_schema
-        )
+        dw_validator = DataWarehouseModelValidator(sql_client=cfg.sql_client, system_schema=cfg.mf_system_schema)
         dw_results = _data_warehouse_validations_runner(dw_validator=dw_validator, model=user_model, timeout=dw_timeout)
 
     merged_results = SemanticManifestValidationResults.merge([parsing_result.issues, model_issues, dw_results])
