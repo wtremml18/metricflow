@@ -63,7 +63,7 @@ def test_validate_configs(cli_runner: MetricFlowCliRunner) -> None:  # noqa: D
     )
     mocked_validate_model = SemanticManifestValidationResults.from_issues_sequence(issues)
     with patch("metricflow.cli.main.model_build_result_from_config", return_value=mocked_parsing_result):
-        with patch.object(SemanticManifestValidator, "validate_semantic_manifest", return_value=mocked_validate_model):
+        with patch.object(SemanticManifestValidator, "validate_model", return_value=mocked_validate_model):
             resp = cli_runner.run(validate_configs)
 
     assert "error_message" in resp.output
@@ -81,7 +81,7 @@ def test_future_errors_and_warnings_conditionally_show_up(cli_runner: MetricFlow
     )
     mocked_validate_model = SemanticManifestValidationResults.from_issues_sequence(issues)
     with patch("metricflow.cli.main.model_build_result_from_config", return_value=mocked_parsing_result):
-        with patch.object(SemanticManifestValidator, "validate_semantic_manifest", return_value=mocked_validate_model):
+        with patch.object(SemanticManifestValidator, "validate_model", return_value=mocked_validate_model):
             resp = cli_runner.run(validate_configs)
 
     assert "warning_message" not in resp.output
@@ -89,7 +89,7 @@ def test_future_errors_and_warnings_conditionally_show_up(cli_runner: MetricFlow
     assert resp.exit_code == 0
 
     with patch("metricflow.cli.main.model_build_result_from_config", return_value=mocked_parsing_result):
-        with patch.object(SemanticManifestValidator, "validate_semantic_manifest", return_value=mocked_validate_model):
+        with patch.object(SemanticManifestValidator, "validate_model", return_value=mocked_validate_model):
             resp = cli_runner.run(validate_configs, ["--show-all"])
 
     assert "warning_message" in resp.output
@@ -105,7 +105,7 @@ def test_validate_configs_data_warehouse_validations(cli_runner: MetricFlowCliRu
     ]
     with patch("metricflow.cli.main.model_build_result_from_config", return_value=mocked_parsing_result):
         with patch.object(
-            SemanticManifestValidator, "validate_semantic_manifest", return_value=SemanticManifestValidationResults()
+            SemanticManifestValidator, "validate_model", return_value=SemanticManifestValidationResults()
         ):
             with patch.object(CLIContext, "sql_client", return_value=None):  # type: ignore
                 with patch(
@@ -124,7 +124,7 @@ def test_validate_configs_skip_data_warehouse_validations(cli_runner: MetricFlow
     with patch("metricflow.cli.main.model_build_result_from_config", return_value=mocked_parsing_result):
         with patch.object(
             SemanticManifestValidator,
-            "validate_semantic_manifest",
+            "validate_model",
             return_value=MagicMock(issues=SemanticManifestValidationResults()),
         ):
             resp = cli_runner.run(validate_configs, args=["--skip-dw"])
