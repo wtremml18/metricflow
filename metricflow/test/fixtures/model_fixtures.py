@@ -59,7 +59,9 @@ def query_parser_from_yaml(
     yaml_contents: List[YamlConfigFile], time_spine_source: TimeSpineSource
 ) -> MetricFlowQueryParser:
     """Given yaml files, return a query parser using default source nodes, resolvers and time spine source."""
-    semantic_manifest_lookup = SemanticManifestLookup(parse_yaml_files_to_validation_ready_model(yaml_contents).model)
+    semantic_manifest_lookup = SemanticManifestLookup(
+        parse_yaml_files_to_validation_ready_model(yaml_contents, apply_transformations=True).model
+    )
     SemanticManifestValidator[PydanticSemanticManifest]().checked_validations(
         semantic_manifest_lookup.semantic_manifest
     )
