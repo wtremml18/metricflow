@@ -16,8 +16,9 @@ from dbt_semantic_interfaces.transformations.semantic_manifest_transformer impor
 from dbt_semantic_interfaces.type_enums.aggregation_type import AggregationType
 
 from metricflow.model.data_warehouse_model_validator import (
+    DataWarehouseModelValidator,
     DataWarehouseTaskBuilder,
-    DataWarehouseValidationTask, DataWarehouseModelValidator,
+    DataWarehouseValidationTask,
 )
 from metricflow.protocols.async_sql_client import AsyncSqlClient
 from metricflow.sql.sql_bind_parameters import SqlBindParameters
