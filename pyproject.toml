@@ -22,6 +22,8 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
+
+
 dependencies = [
   "Jinja2>=2.11.3",
   "MarkupSafe==2.0.1",
@@ -29,7 +31,7 @@ dependencies = [
   "SQLAlchemy~=1.4.42",
   "click>=7.1.2",
   "databricks-sql-connector==2.0.3",
-  "dbt-semantic-interfaces==0.1.0.dev3",
+  "dbt-semantic-interfaces",
   "duckdb-engine~=0.1.8",
   "duckdb==0.3.4",
   "google-auth~=2.13.0",
@@ -110,6 +112,9 @@ exclude = [
 
 [tool.hatch.envs.dev-env]
 description = "Environment for development."
+pre-install-commands = [
+  "pip install -e ../dbt-semantic-interfaces/"
+]
 features = [
   "dbt-redshift",
   "dbt-snowflake",
