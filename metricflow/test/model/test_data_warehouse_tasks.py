@@ -5,16 +5,15 @@ from typing import Tuple
 
 import pytest
 from _pytest.fixtures import FixtureRequest
-from dbt_semantic_interfaces.model_transformer import ModelTransformer
 from dbt_semantic_interfaces.protocols.dimension import Dimension, DimensionType
 from dbt_semantic_interfaces.protocols.entity import Entity, EntityType
 from dbt_semantic_interfaces.protocols.measure import Measure
 from dbt_semantic_interfaces.protocols.semantic_manifest import SemanticManifest
 from dbt_semantic_interfaces.test_utils import semantic_model_with_guaranteed_meta
+from dbt_semantic_interfaces.transformations.semantic_manifest_transformer import PydanticSemanticManifestTransformer
 from dbt_semantic_interfaces.type_enums.aggregation_type import AggregationType
 
 from metricflow.model.data_warehouse_model_validator import (
-    DataWarehouseModelValidator,
     DataWarehouseTaskBuilder,
     DataWarehouseValidationTask,
 )
@@ -56,7 +55,7 @@ def test_build_semantic_model_tasks(  # noqa:D
 def test_task_runner(  # noqa: D
     async_sql_client: AsyncSqlClient, mf_test_session_state: MetricFlowTestSessionState
 ) -> None:
-    dw_validator = DataWarehouseModelValidator(
+    dw_validator = DataWarehouseSemanticManifestValidator[PydanticSemanticManifest](
         sql_client=async_sql_client, system_schema=mf_test_session_state.mf_system_schema
     )
 
@@ -90,7 +89,7 @@ def test_validate_semantic_models(  # noqa: D
 ) -> None:
     model = deepcopy(dw_backed_warehouse_validation_model)
 
-    dw_validator = DataWarehouseModelValidator(
+    dw_validator = DataWarehouseSemanticManifestValidator[PydanticSemanticManifest](
         sql_client=async_sql_client, system_schema=mf_test_session_state.mf_system_schema
     )
 
@@ -133,7 +132,7 @@ def test_validate_dimensions(  # noqa: D
 ) -> None:
     model = deepcopy(dw_backed_warehouse_validation_model)
 
-    dw_validator = DataWarehouseModelValidator(
+    dw_validator = DataWarehouseSemanticManifestValidator[PydanticSemanticManifest](
         sql_client=async_sql_client, system_schema=mf_test_session_state.mf_system_schema
     )
 
@@ -171,7 +170,7 @@ def test_validate_entities(  # noqa: D
 ) -> None:
     model = deepcopy(dw_backed_warehouse_validation_model)
 
-    dw_validator = DataWarehouseModelValidator(
+    dw_validator = DataWarehouseSemanticManifestValidator[PydanticSemanticManifest](
         sql_client=async_sql_client, system_schema=mf_test_session_state.mf_system_schema
     )
 
@@ -209,7 +208,7 @@ def test_validate_measures(  # noqa: D
 ) -> None:
     model = deepcopy(dw_backed_warehouse_validation_model)
 
-    dw_validator = DataWarehouseModelValidator(
+    dw_validator = DataWarehouseSemanticManifestValidator[PydanticSemanticManifest](
         sql_client=async_sql_client, system_schema=mf_test_session_state.mf_system_schema
     )
 
@@ -259,7 +258,7 @@ def test_validate_metrics(  # noqa: D
     mf_test_session_state: MetricFlowTestSessionState,
 ) -> None:
     model = deepcopy(dw_backed_warehouse_validation_model)
-    dw_validator = DataWarehouseModelValidator(
+    dw_validator = DataWarehouseSemanticManifestValidator[PydanticSemanticManifest](
         sql_client=async_sql_client, system_schema=mf_test_session_state.mf_system_schema
     )
 
@@ -278,10 +277,10 @@ def test_validate_metrics(  # noqa: D
     )
     model.semantic_models[0].measures = new_measures
     model.metrics = []
-    model = ModelTransformer.transform(model)
+    model = PydanticSemanticManifestTransformer.transform(model)
 
     # Validate new metric created by proxy causes an issue (because the column used doesn't exist)
-    dw_validator = DataWarehouseModelValidator(
+    dw_validator = DataWarehouseSemanticManifestValidator[PydanticSemanticManifest](
         sql_client=async_sql_client, system_schema=mf_test_session_state.mf_system_schema
     )
     issues = dw_validator.validate_metrics(model)

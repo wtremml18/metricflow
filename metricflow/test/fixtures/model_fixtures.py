@@ -7,8 +7,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Sequence
 
 import pytest
-from dbt_semantic_interfaces.model_transformer import ModelTransformer
-from dbt_semantic_interfaces.model_validator import ModelValidator
+from dbt_semantic_interfaces.implementations.semantic_manifest import PydanticSemanticManifest
 from dbt_semantic_interfaces.parsing.dir_to_model import (
     parse_directory_of_yaml_files_to_model,
     parse_yaml_files_to_validation_ready_model,
@@ -16,6 +15,9 @@ from dbt_semantic_interfaces.parsing.dir_to_model import (
 from dbt_semantic_interfaces.parsing.objects import YamlConfigFile
 from dbt_semantic_interfaces.protocols.semantic_manifest import SemanticManifest
 from dbt_semantic_interfaces.protocols.semantic_model import SemanticModel
+from dbt_semantic_interfaces.transformations.pydantic_rule_set import PydanticSemanticManifestTransformRuleSet
+from dbt_semantic_interfaces.transformations.semantic_manifest_transformer import PydanticSemanticManifestTransformer
+from dbt_semantic_interfaces.validations.semantic_manifest_validator import SemanticManifestValidator
 
 from metricflow.dataflow.builder.node_data_set import DataflowPlanNodeOutputDataSetResolver
 from metricflow.dataflow.builder.source_node import SourceNodeBuilder
@@ -58,7 +60,9 @@ def query_parser_from_yaml(
 ) -> MetricFlowQueryParser:
     """Given yaml files, return a query parser using default source nodes, resolvers and time spine source."""
     semantic_manifest_lookup = SemanticManifestLookup(parse_yaml_files_to_validation_ready_model(yaml_contents).model)
-    ModelValidator().checked_validations(semantic_manifest_lookup.semantic_manifest)
+    SemanticManifestValidator[PydanticSemanticManifest]().checked_validations(
+        semantic_manifest_lookup.semantic_manifest
+    )
     source_nodes = _data_set_to_source_nodes(semantic_manifest_lookup, create_data_sets(semantic_manifest_lookup))
     return MetricFlowQueryParser(
         model=semantic_manifest_lookup,
@@ -201,8 +205,8 @@ def simple_model__with_primary_transforms(template_mapping: Dict[str, str]) -> S
         template_mapping=template_mapping,
         apply_transformations=False,
     )
-    transformed_model = ModelTransformer.transform(
-        model=model_build_result.model, ordered_rule_sequences=(ModelTransformer.PRIMARY_RULES,)
+    transformed_model = PydanticSemanticManifestTransformer.transform(
+        model=model_build_result.model, ordered_rule_sequences=(PydanticSemanticManifestTransformRuleSet.primary_rules,)
     )
     return transformed_model
 

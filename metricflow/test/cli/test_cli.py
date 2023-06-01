@@ -3,9 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
-from dbt_semantic_interfaces.model_validator import ModelValidator
 from dbt_semantic_interfaces.validations.validator_helpers import (
-    ModelValidationResults,
+    SemanticManifestValidationResults,
     ValidationError,
     ValidationFutureError,
     ValidationWarning,
@@ -54,14 +53,14 @@ def test_get_dimension_values(cli_runner: MetricFlowCliRunner) -> None:  # noqa:
 
 def test_validate_configs(cli_runner: MetricFlowCliRunner) -> None:  # noqa: D
     # Mock build result for `model_build_result_from_config`
-    mocked_parsing_result = MagicMock(issues=ModelValidationResults())
+    mocked_parsing_result = MagicMock(issues=SemanticManifestValidationResults())
     # Mock validation errors in validate_model function
     issues = (
         ValidationWarning(context=None, message="warning_message"),  # type: ignore
         ValidationFutureError(context=None, message="future_error_message", error_date=datetime.now()),  # type: ignore
         ValidationError(context=None, message="error_message"),  # type: ignore
     )
-    mocked_validate_model = ModelValidationResults.from_issues_sequence(issues)
+    mocked_validate_model = SemanticManifestValidationResults.from_issues_sequence(issues)
     with patch("metricflow.cli.main.model_build_result_from_config", return_value=mocked_parsing_result):
         with patch.object(ModelValidator, "validate_model", return_value=mocked_validate_model):
             resp = cli_runner.run(validate_configs)
@@ -72,14 +71,14 @@ def test_validate_configs(cli_runner: MetricFlowCliRunner) -> None:  # noqa: D
 
 def test_future_errors_and_warnings_conditionally_show_up(cli_runner: MetricFlowCliRunner) -> None:  # noqa: D
     # Mock build result for `model_build_result_from_config`
-    mocked_parsing_result = MagicMock(issues=ModelValidationResults())
+    mocked_parsing_result = MagicMock(issues=SemanticManifestValidationResults())
     # Mock validation errors in validate_model function
     issues = (
         ValidationWarning(context=None, message="warning_message"),  # type: ignore
         ValidationFutureError(context=None, message="future_error_message", error_date=datetime.now()),  # type: ignore
         ValidationError(context=None, message="error_message"),  # type: ignore
     )
-    mocked_validate_model = ModelValidationResults.from_issues_sequence(issues)
+    mocked_validate_model = SemanticManifestValidationResults.from_issues_sequence(issues)
     with patch("metricflow.cli.main.model_build_result_from_config", return_value=mocked_parsing_result):
         with patch.object(ModelValidator, "validate_model", return_value=mocked_validate_model):
             resp = cli_runner.run(validate_configs)
@@ -99,16 +98,16 @@ def test_future_errors_and_warnings_conditionally_show_up(cli_runner: MetricFlow
 
 def test_validate_configs_data_warehouse_validations(cli_runner: MetricFlowCliRunner) -> None:  # noqa: D
     # Mock build result for `model_build_result_from_config`
-    mocked_parsing_result = MagicMock(issues=ModelValidationResults())
+    mocked_parsing_result = MagicMock(issues=SemanticManifestValidationResults())
     dw_validation_issues = [
         ValidationError(context=None, message="Data Warehouse Error"),  # type: ignore
     ]
     with patch("metricflow.cli.main.model_build_result_from_config", return_value=mocked_parsing_result):
-        with patch.object(ModelValidator, "validate_model", return_value=ModelValidationResults()):
+        with patch.object(ModelValidator, "validate_model", return_value=SemanticManifestValidationResults()):
             with patch.object(CLIContext, "sql_client", return_value=None):  # type: ignore
                 with patch(
                     "metricflow.cli.main._run_dw_validations",
-                    return_value=ModelValidationResults(errors=dw_validation_issues),
+                    return_value=SemanticManifestValidationResults(errors=dw_validation_issues),
                 ):
                     resp = cli_runner.run(validate_configs)
 
@@ -118,9 +117,11 @@ def test_validate_configs_data_warehouse_validations(cli_runner: MetricFlowCliRu
 
 def test_validate_configs_skip_data_warehouse_validations(cli_runner: MetricFlowCliRunner) -> None:  # noqa: D
     # Mock build result for `model_build_result_from_config`
-    mocked_parsing_result = MagicMock(issues=ModelValidationResults())
+    mocked_parsing_result = MagicMock(issues=SemanticManifestValidationResults())
     with patch("metricflow.cli.main.model_build_result_from_config", return_value=mocked_parsing_result):
-        with patch.object(ModelValidator, "validate_model", return_value=MagicMock(issues=ModelValidationResults())):
+        with patch.object(
+            ModelValidator, "validate_model", return_value=MagicMock(issues=SemanticManifestValidationResults())
+        ):
             resp = cli_runner.run(validate_configs, args=["--skip-dw"])
 
     assert "Data Warehouse Error" not in resp.output

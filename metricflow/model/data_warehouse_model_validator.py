@@ -21,7 +21,7 @@ from dbt_semantic_interfaces.references import (
 from dbt_semantic_interfaces.validations.validator_helpers import (
     FileContext,
     MetricContext,
-    ModelValidationResults,
+    SemanticManifestValidationResults,
     SemanticModelContext,
     SemanticModelElementContext,
     SemanticModelElementType,
@@ -494,7 +494,7 @@ class DataWarehouseModelValidator:
 
     def run_tasks(
         self, tasks: List[DataWarehouseValidationTask], timeout: Optional[int] = None
-    ) -> ModelValidationResults:
+    ) -> SemanticManifestValidationResults:
         """Runs the list of tasks as queries agains the data warehouse, returning any found issues.
 
         Args:
@@ -533,11 +533,11 @@ class DataWarehouseModelValidator:
                     sub_task_timeout = floor(timeout - (perf_counter() - start_time)) if timeout else None
                     issues += self.run_tasks(tasks=task.on_fail_subtasks, timeout=sub_task_timeout).all_issues
 
-        return ModelValidationResults.from_issues_sequence(issues)
+        return SemanticManifestValidationResults.from_issues_sequence(issues)
 
     def validate_semantic_models(
         self, model: SemanticManifest, timeout: Optional[int] = None
-    ) -> ModelValidationResults:
+    ) -> SemanticManifestValidationResults:
         """Generates a list of tasks for validating the semantic models of the model and then runs them.
 
         Args:
@@ -552,7 +552,9 @@ class DataWarehouseModelValidator:
         )
         return self.run_tasks(tasks=tasks, timeout=timeout)
 
-    def validate_dimensions(self, model: SemanticManifest, timeout: Optional[int] = None) -> ModelValidationResults:
+    def validate_dimensions(
+        self, model: SemanticManifest, timeout: Optional[int] = None
+    ) -> SemanticManifestValidationResults:
         """Generates a list of tasks for validating the dimensions of the model and then runs them.
 
         Args:
@@ -567,7 +569,9 @@ class DataWarehouseModelValidator:
         )
         return self.run_tasks(tasks=tasks, timeout=timeout)
 
-    def validate_entities(self, model: SemanticManifest, timeout: Optional[int] = None) -> ModelValidationResults:
+    def validate_entities(
+        self, model: SemanticManifest, timeout: Optional[int] = None
+    ) -> SemanticManifestValidationResults:
         """Generates a list of tasks for validating the entities of the model and then runs them.
 
         Args:
@@ -582,7 +586,9 @@ class DataWarehouseModelValidator:
         )
         return self.run_tasks(tasks=tasks, timeout=timeout)
 
-    def validate_measures(self, model: SemanticManifest, timeout: Optional[int] = None) -> ModelValidationResults:
+    def validate_measures(
+        self, model: SemanticManifest, timeout: Optional[int] = None
+    ) -> SemanticManifestValidationResults:
         """Generates a list of tasks for validating the measures of the model and then runs them.
 
         Args:
@@ -597,7 +603,9 @@ class DataWarehouseModelValidator:
         )
         return self.run_tasks(tasks=tasks, timeout=timeout)
 
-    def validate_metrics(self, model: SemanticManifest, timeout: Optional[int] = None) -> ModelValidationResults:
+    def validate_metrics(
+        self, model: SemanticManifest, timeout: Optional[int] = None
+    ) -> SemanticManifestValidationResults:
         """Generates a list of tasks for validating the metrics of the model and then runs them.
 
         Args:
