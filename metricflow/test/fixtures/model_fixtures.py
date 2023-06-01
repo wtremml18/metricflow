@@ -9,13 +9,13 @@ from typing import Dict, List, Sequence
 import pytest
 from dbt_semantic_interfaces.model_transformer import ModelTransformer
 from dbt_semantic_interfaces.model_validator import ModelValidator
-from dbt_semantic_interfaces.protocols.semantic_manifest import SemanticManifest
-from dbt_semantic_interfaces.protocols.semantic_model import SemanticModel
 from dbt_semantic_interfaces.parsing.dir_to_model import (
     parse_directory_of_yaml_files_to_model,
     parse_yaml_files_to_validation_ready_model,
 )
 from dbt_semantic_interfaces.parsing.objects import YamlConfigFile
+from dbt_semantic_interfaces.protocols.semantic_manifest import SemanticManifest
+from dbt_semantic_interfaces.protocols.semantic_model import SemanticModel
 
 from metricflow.dataflow.builder.node_data_set import DataflowPlanNodeOutputDataSetResolver
 from metricflow.dataflow.builder.source_node import SourceNodeBuilder

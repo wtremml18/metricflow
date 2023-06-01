@@ -10,10 +10,10 @@ from dbt_semantic_interfaces.protocols.dimension import (
     DimensionType,
     DimensionTypeParams,
 )
-from dbt_semantic_interfaces.protocols.where_filter import WhereFilter
 from dbt_semantic_interfaces.protocols.metadata import Metadata
 from dbt_semantic_interfaces.protocols.metric import Metric as SemanticManifestMetric
 from dbt_semantic_interfaces.protocols.metric import MetricType, MetricTypeParams
+from dbt_semantic_interfaces.protocols.where_filter import WhereFilter
 
 from metricflow.model.semantics.linkable_spec_resolver import ElementPathKey
 from metricflow.specs.specs import DimensionSpec, EntityReference
