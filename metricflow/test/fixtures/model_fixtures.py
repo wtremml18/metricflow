@@ -209,7 +209,7 @@ def simple_model__with_primary_transforms(template_mapping: Dict[str, str]) -> S
     )
     transformed_model = PydanticSemanticManifestTransformer().transform(
         model=model_build_result.model,
-        ordered_rule_sequences=((PydanticSemanticManifestTransformRuleSet().primary_rules,),),
+        ordered_rule_sequences=(PydanticSemanticManifestTransformRuleSet().primary_rules,),
     )
     return transformed_model
 
