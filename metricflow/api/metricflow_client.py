@@ -4,7 +4,7 @@ import logging
 from typing import Dict, List, Optional
 
 from dbt_semantic_interfaces.model_validator import ModelValidator
-from dbt_semantic_interfaces.objects.semantic_manifest import SemanticManifest
+from dbt_semantic_interfaces.protocols.semantic_manifest import SemanticManifest
 from dbt_semantic_interfaces.validations.validator_helpers import ModelValidationResults
 
 from metricflow.configuration.config_handler import ConfigHandler

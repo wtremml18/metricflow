@@ -4,7 +4,7 @@ import datetime as dt
 from typing import Optional
 
 from dateutil.parser import parse
-from dbt_semantic_interfaces.objects.semantic_manifest import SemanticManifest
+from dbt_semantic_interfaces.protocols.semantic_manifest import SemanticManifest
 
 from dbt_semantic_interfaces.parsing.dir_to_model import ModelBuildResult, parse_directory_of_yaml_files_to_model
 from metricflow.configuration.constants import CONFIG_MODEL_PATH

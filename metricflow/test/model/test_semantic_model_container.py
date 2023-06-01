@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 import pytest
-from dbt_semantic_interfaces.objects.semantic_manifest import SemanticManifest
+from dbt_semantic_interfaces.protocols.semantic_manifest import SemanticManifest
 from dbt_semantic_interfaces.references import EntityReference, MeasureReference, MetricReference
 
 from metricflow.model.semantics.linkable_element_properties import LinkableElementProperties

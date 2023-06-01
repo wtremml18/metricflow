@@ -4,7 +4,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from typing import Dict, Optional
 
-from dbt_semantic_interfaces.objects.semantic_manifest import SemanticManifest
+from dbt_semantic_interfaces.protocols.semantic_manifest import SemanticManifest
 
 from metricflow.configuration.config_handler import ConfigHandler
 from metricflow.configuration.constants import (

@@ -16,7 +16,7 @@ import click
 import jinja2
 import pandas as pd
 from dbt_semantic_interfaces.model_validator import ModelValidator
-from dbt_semantic_interfaces.objects.semantic_manifest import SemanticManifest
+from dbt_semantic_interfaces.protocols.semantic_manifest import SemanticManifest
 from halo import Halo
 from packaging.version import parse
 from update_checker import UpdateChecker
