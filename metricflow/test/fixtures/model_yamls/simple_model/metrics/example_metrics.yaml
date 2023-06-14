@@ -1,0 +1,28 @@
+---
+metric:
+  name: "order_gross_profit"
+  description: "The number of orders places"
+  type: derived
+  type_params:
+    expr: revenue - cost
+    metrics:
+      - name: food_order_amount
+        alias: revenue
+      - name: order_amount
+        alias: cost
+---
+metric:
+  name: "food_order_amount"
+  description: "Sum order amoung for food orders."
+  type: simple
+  type_params:
+    measures:
+      - food_orders
+---
+metric:
+  name: "order_amount"
+  description: The cost of fulfilling each order
+  type: simple
+  type_params:
+    measures:
+      - order_cost
