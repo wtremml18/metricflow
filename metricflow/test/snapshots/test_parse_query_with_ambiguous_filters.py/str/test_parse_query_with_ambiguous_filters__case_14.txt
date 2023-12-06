@@ -1,0 +1,80 @@
+Query parser test for ambiguous filter:
+
+case_id:
+  'case_14'
+
+metrics_to_query:
+  ['derived_metric_with_same_parent_time_grains',]
+
+filter_ambiguity_case:
+  AmbiguousFilterResolutionTestConfiguration(
+    filter_location=FILTER_IN_INPUT_METRIC,
+    parent_time_grain_congruence=SAME_BASE_GRAIN,
+    filter_ambiguity=AMBIGUOUS,
+    filter_validity=VALID,
+  )
+
+query_spec:
+  MetricFlowQuerySpec(
+    metric_specs=(MetricSpec(element_name='derived_metric_with_same_parent_time_grains'),),
+    time_dimension_specs=(TimeDimensionSpec(element_name='metric_time', time_granularity=MONTH),),
+    filter_intersection=PydanticWhereFilterIntersection(),
+    filter_spec_resolution_lookup=FilterSpecResolutionLookUp(
+      spec_resolutions=(
+        FilterSpecResolution(
+          lookup_key=ResolvedSpecLookUpKey(
+            filter_location=WhereFilterLocation(
+              metric_references=(
+                MetricReference(
+                  element_name='monthly_metric_0',
+                ),
+              ),
+            ),
+            call_parameter_set=TimeDimensionCallParameterSet(
+              time_dimension_reference=TimeDimensionReference(
+                element_name='metric_time',
+              ),
+            ),
+          ),
+          resolution_path=MetricFlowQueryResolutionPath(
+            resolution_path_nodes=(
+              QueryGroupByItemResolutionNode(node_id=qr_29),
+              MetricGroupByItemResolutionNode(node_id=mtr_29),
+              MetricGroupByItemResolutionNode(node_id=mtr_27),
+            ),
+          ),
+          resolved_spec=TimeDimensionSpec(
+            element_name='metric_time',
+            time_granularity=MONTH,
+          ),
+        ),
+        FilterSpecResolution(
+          lookup_key=ResolvedSpecLookUpKey(
+            filter_location=WhereFilterLocation(
+              metric_references=(
+                MetricReference(
+                  element_name='monthly_metric_1',
+                ),
+              ),
+            ),
+            call_parameter_set=TimeDimensionCallParameterSet(
+              time_dimension_reference=TimeDimensionReference(
+                element_name='metric_time',
+              ),
+            ),
+          ),
+          resolution_path=MetricFlowQueryResolutionPath(
+            resolution_path_nodes=(
+              QueryGroupByItemResolutionNode(node_id=qr_29),
+              MetricGroupByItemResolutionNode(node_id=mtr_29),
+              MetricGroupByItemResolutionNode(node_id=mtr_28),
+            ),
+          ),
+          resolved_spec=TimeDimensionSpec(
+            element_name='metric_time',
+            time_granularity=MONTH,
+          ),
+        ),
+      ),
+    ),
+  )

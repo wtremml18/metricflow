@@ -1,0 +1,61 @@
+Query parser test for ambiguous filter:
+
+case_id:
+  'case_00'
+
+metrics_to_query:
+  ['monthly_metric_0', 'monthly_metric_1']
+
+filter_ambiguity_case:
+  AmbiguousFilterResolutionTestConfiguration(
+    filter_location=FILTER_IN_QUERY_FOR_SIMPLE_METRICS,
+    parent_time_grain_congruence=SAME_BASE_GRAIN,
+    filter_ambiguity=SPECIFIC,
+    filter_validity=VALID,
+  )
+
+query_spec:
+  MetricFlowQuerySpec(
+    metric_specs=(MetricSpec(element_name='monthly_metric_0'), MetricSpec(element_name='monthly_metric_1')),
+    time_dimension_specs=(TimeDimensionSpec(element_name='metric_time', time_granularity=MONTH),),
+    filter_intersection=PydanticWhereFilterIntersection(
+      where_filters=[
+        PydanticWhereFilter(
+          where_sql_template="{{TimeDimension('metric_time', 'year')}} > '2020-01-01'",
+        ),
+      ],
+    ),
+    filter_spec_resolution_lookup=FilterSpecResolutionLookUp(
+      spec_resolutions=(
+        FilterSpecResolution(
+          lookup_key=ResolvedSpecLookUpKey(
+            filter_location=WhereFilterLocation(
+              metric_references=(
+                MetricReference(
+                  element_name='monthly_metric_0',
+                ),
+                MetricReference(
+                  element_name='monthly_metric_1',
+                ),
+              ),
+            ),
+            call_parameter_set=TimeDimensionCallParameterSet(
+              time_dimension_reference=TimeDimensionReference(
+                element_name='metric_time',
+              ),
+              time_granularity=YEAR,
+            ),
+          ),
+          resolution_path=MetricFlowQueryResolutionPath(
+            resolution_path_nodes=(
+              QueryGroupByItemResolutionNode(node_id=qr_1),
+            ),
+          ),
+          resolved_spec=TimeDimensionSpec(
+            element_name='metric_time',
+            time_granularity=YEAR,
+          ),
+        ),
+      ),
+    ),
+  )
