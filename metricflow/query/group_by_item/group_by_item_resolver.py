@@ -22,6 +22,7 @@ from metricflow.query.issues.group_by_item_resolver.ambiguous_group_by_item impo
 from metricflow.query.issues.issues_base import (
     MetricFlowQueryResolutionIssueSet,
 )
+from metricflow.query.suggestion_generator import GroupByItemSuggestionGenerator
 from metricflow.specs.patterns.base_time_grain import BaseTimeGrainPattern
 from metricflow.specs.patterns.spec_pattern import SpecPattern
 from metricflow.specs.patterns.typed_patterns import TimeDimensionPattern
@@ -66,6 +67,7 @@ class GroupByItemResolver:
     def resolve_matching_item_for_querying(
         self,
         spec_pattern: SpecPattern,
+        suggestion_generator: Optional[GroupByItemSuggestionGenerator],
     ) -> GroupByItemResolution:
         """Returns the spec that corresponds the one described by spec_pattern and is valid for the query.
 
@@ -75,6 +77,7 @@ class GroupByItemResolver:
         push_down_visitor = _PushDownGroupByItemCandidatesVisitor(
             manifest_lookup=self._manifest_lookup,
             source_spec_patterns=(spec_pattern,),
+            suggestion_generator=suggestion_generator,
         )
 
         push_down_result: PushDownResult = self._resolution_dag.sink_node.accept(push_down_visitor)
@@ -126,6 +129,10 @@ class GroupByItemResolver:
                 spec_pattern,
                 BaseTimeGrainPattern(),
             ),
+            suggestion_generator=GroupByItemSuggestionGenerator(
+                input_spec_pattern=spec_pattern,
+                candidate_filter=None,
+            ),
         )
 
         push_down_result: PushDownResult = resolution_node.accept(push_down_visitor)
@@ -166,6 +173,7 @@ class GroupByItemResolver:
         push_down_visitor = _PushDownGroupByItemCandidatesVisitor(
             manifest_lookup=self._manifest_lookup,
             source_spec_patterns=(),
+            suggestion_generator=None,
         )
 
         push_down_result: PushDownResult = resolution_node.accept(push_down_visitor)
@@ -184,6 +192,7 @@ class GroupByItemResolver:
                     time_dimension_reference=TimeDimensionReference(element_name=METRIC_TIME_ELEMENT_NAME),
                 )
             ),
+            suggestion_generator=None,
         )
         metric_time_spec_set = (
             LinkableSpecSet.from_specs((metric_time_grain_resolution.spec,))

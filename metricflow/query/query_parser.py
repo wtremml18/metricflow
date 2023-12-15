@@ -307,7 +307,6 @@ class MetricFlowQueryParser:
         where_constraint_str: Optional[str] = None,
         order_by_names: Optional[Sequence[str]] = None,
         order_by: Optional[Sequence[OrderByQueryParameter]] = None,
-        include_time_range_constraint: bool = True,
     ) -> MetricFlowQuerySpec:
         """Parse the query into spec objects, validating them in the process.
 

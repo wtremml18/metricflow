@@ -39,7 +39,9 @@ from metricflow.query.resolver_inputs.query_resolver_inputs import (
     ResolverInputForQuery,
     ResolverInputForWhereFilterIntersection,
 )
+from metricflow.query.suggestion_generator import GroupByItemSuggestionGenerator
 from metricflow.query.validation_rules.query_validator import PostResolutionQueryValidator
+from metricflow.specs.patterns.whitelist_pattern import WhitelistSpecPatten
 from metricflow.specs.specs import (
     InstanceSpec,
     LinkableInstanceSpec,
@@ -94,16 +96,21 @@ class MetricFlowQueryResolver:
             manifest_lookup=self._manifest_lookup,
         )
 
+    @staticmethod
     def _resolve_group_by_item_input(
-        self, resolution_dag: GroupByItemResolutionDag, group_by_item_input: ResolverInputForGroupByItem
+        group_by_item_input: ResolverInputForGroupByItem,
+        group_by_item_resolver: GroupByItemResolver,
+        valid_group_by_item_specs_for_querying: Sequence[LinkableInstanceSpec],
     ) -> GroupByItemResolution:
-        group_by_item_resolver = GroupByItemResolver(
-            manifest_lookup=self._manifest_lookup,
-            resolution_dag=resolution_dag,
+        suggestion_generator = GroupByItemSuggestionGenerator(
+            input_spec_pattern=group_by_item_input.spec_pattern,
+            candidate_filter=WhitelistSpecPatten(
+                whitelisted_specs=valid_group_by_item_specs_for_querying,
+            ),
         )
-
         return group_by_item_resolver.resolve_matching_item_for_querying(
             spec_pattern=group_by_item_input.spec_pattern,
+            suggestion_generator=suggestion_generator,
         )
 
     def _resolve_metric_inputs(
@@ -157,11 +164,20 @@ class MetricFlowQueryResolver:
         )
         logger.info(f"Resolution DAG is:\n{dag_as_text(resolution_dag)}")
 
+        group_by_item_resolver = GroupByItemResolver(
+            manifest_lookup=self._manifest_lookup,
+            resolution_dag=resolution_dag,
+        )
+
+        valid_group_by_item_specs_for_querying = group_by_item_resolver.resolve_available_items().specs
+
         input_to_issue_set_mapping_items: List[InputToIssueSetMappingItem] = []
         group_by_item_specs: List[LinkableInstanceSpec] = []
         for group_by_item_input in group_by_item_inputs:
-            resolution = self._resolve_group_by_item_input(
-                resolution_dag=resolution_dag, group_by_item_input=group_by_item_input
+            resolution = MetricFlowQueryResolver._resolve_group_by_item_input(
+                group_by_item_resolver=group_by_item_resolver,
+                group_by_item_input=group_by_item_input,
+                valid_group_by_item_specs_for_querying=valid_group_by_item_specs_for_querying,
             )
             if resolution.issue_set.has_issues:
                 input_to_issue_set_mapping_items.append(

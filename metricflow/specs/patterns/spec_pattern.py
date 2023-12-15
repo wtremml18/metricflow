@@ -20,3 +20,10 @@ class SpecPattern(ABC):
     def matches_any(self, candidate_specs: Sequence[InstanceSpec]) -> bool:
         """Returns true if this spec matches any of the given specs."""
         return len(self.match(candidate_specs)) > 0
+
+    def partially_match(self, candidate_specs: Sequence[InstanceSpec], max_items: int) -> Sequence[InstanceSpec]:
+        """For generating suggestions, return the specs that most closely match this pattern.
+
+        The specs are returned in the order of closeness, with the closest matches first.
+        """
+        return self.match(candidate_specs)[:max_items]
