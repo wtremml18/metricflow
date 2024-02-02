@@ -20,35 +20,35 @@ Using 'session' scope can result in other 'session' scope fixtures causing ID co
 """
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def column_association_resolver(  # noqa: D
     mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> ColumnAssociationResolver:
     return mf_engine_test_fixture_mapping[SemanticManifestName.SIMPLE_MANIFEST].column_association_resolver
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def dataflow_plan_builder(  # noqa: D
     mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> DataflowPlanBuilder:
     return mf_engine_test_fixture_mapping[SemanticManifestName.SIMPLE_MANIFEST].dataflow_plan_builder
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def query_parser(  # noqa: D
     mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> MetricFlowQueryParser:
     return mf_engine_test_fixture_mapping[SemanticManifestName.SIMPLE_MANIFEST].query_parser
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def extended_date_dataflow_plan_builder(  # noqa: D
     mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> DataflowPlanBuilder:
     return mf_engine_test_fixture_mapping[SemanticManifestName.EXTENDED_DATE_MANIFEST].dataflow_plan_builder
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def multihop_dataflow_plan_builder(  # noqa: D
     mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> DataflowPlanBuilder:
@@ -57,21 +57,21 @@ def multihop_dataflow_plan_builder(  # noqa: D
     ].dataflow_plan_builder
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def scd_column_association_resolver(  # noqa: D
     mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> ColumnAssociationResolver:
     return mf_engine_test_fixture_mapping[SemanticManifestName.SCD_MANIFEST].column_association_resolver
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def scd_dataflow_plan_builder(  # noqa: D
     mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> DataflowPlanBuilder:
     return mf_engine_test_fixture_mapping[SemanticManifestName.SCD_MANIFEST].dataflow_plan_builder
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def scd_query_parser(  # noqa: D
     mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> MetricFlowQueryParser:
