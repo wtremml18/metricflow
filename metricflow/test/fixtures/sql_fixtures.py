@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+from typing import Mapping
+from metricflow.test.fixtures.manifest_fixtures import MetricFlowEngineTestFixture, SemanticManifestName
 from metricflow.model.semantic_manifest_lookup import SemanticManifestLookup
 from metricflow.plan_conversion.column_resolver import DunderColumnAssociationResolver
 from metricflow.plan_conversion.dataflow_to_sql import DataflowToSqlQueryPlanConverter
@@ -15,19 +17,14 @@ def default_sql_plan_renderer() -> SqlQueryPlanRenderer:  # noqa: D
 
 @pytest.fixture(scope="session")
 def dataflow_to_sql_converter(  # noqa: D
-    simple_semantic_manifest_lookup: SemanticManifestLookup,
+    mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> DataflowToSqlQueryPlanConverter:
-    return DataflowToSqlQueryPlanConverter(
-        column_association_resolver=DunderColumnAssociationResolver(simple_semantic_manifest_lookup),
-        semantic_manifest_lookup=simple_semantic_manifest_lookup,
-    )
+    return mf_engine_test_fixture_mapping[SemanticManifestName.SIMPLE_MANIFEST].dataflow_to_sql_converter
 
 
 @pytest.fixture(scope="session")
 def extended_date_dataflow_to_sql_converter(  # noqa: D
-    extended_date_semantic_manifest_lookup: SemanticManifestLookup,
+    mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> DataflowToSqlQueryPlanConverter:
-    return DataflowToSqlQueryPlanConverter(
-        column_association_resolver=DunderColumnAssociationResolver(extended_date_semantic_manifest_lookup),
-        semantic_manifest_lookup=extended_date_semantic_manifest_lookup,
-    )
+    return mf_engine_test_fixture_mapping[SemanticManifestName.EXTENDED_DATE_MANIFEST].dataflow_to_sql_converter
+
