@@ -12,6 +12,7 @@ from dbt_semantic_interfaces.test_utils import as_datetime
 from metricflow.dataflow.builder.dataflow_plan_builder import DataflowPlanBuilder
 from metricflow.dataflow.builder.node_data_set import DataflowPlanNodeOutputDataSetResolver
 from metricflow.dataflow.dataflow_plan import ReadSqlSourceNode
+from metricflow.dataset.semantic_model_adapter import SemanticModelDataSet
 from metricflow.engine.metricflow_engine import MetricFlowEngine
 from metricflow.model.semantic_manifest_lookup import SemanticManifestLookup
 from metricflow.plan_conversion.column_resolver import DunderColumnAssociationResolver
@@ -57,6 +58,7 @@ class MetricFlowEngineTestFixture:
     semantic_manifest: SemanticManifest
     semantic_manifest_lookup: SemanticManifestLookup
     column_association_resolver: ColumnAssociationResolver
+    data_set_mapping: OrderedDict[str, SemanticModelDataSet]
     read_node_mapping: OrderedDict[str, ReadSqlSourceNode]
     dataflow_plan_builder: DataflowPlanBuilder
     dataflow_to_sql_converter: DataflowToSqlQueryPlanConverter
@@ -81,9 +83,9 @@ def mf_engine_test_fixture_mapping(
 
             semantic_manifest = build_result.semantic_manifest
             semantic_manifest_lookup = SemanticManifestLookup(semantic_manifest)
-            data_sets = create_data_sets(semantic_manifest_lookup)
-            read_node_mapping = _data_set_to_read_nodes(data_sets)
-            source_nodes = _data_set_to_source_nodes(semantic_manifest_lookup, data_sets)
+            data_set_mapping = create_data_sets(semantic_manifest_lookup)
+            read_node_mapping = _data_set_to_read_nodes(data_set_mapping)
+            source_nodes = _data_set_to_source_nodes(semantic_manifest_lookup, data_set_mapping)
             time_spine_source_node = _build_time_spine_source_node(semantic_manifest_lookup)
             column_association_resolver = DunderColumnAssociationResolver(semantic_manifest_lookup)
             node_output_resolver = DataflowPlanNodeOutputDataSetResolver(
@@ -95,6 +97,7 @@ def mf_engine_test_fixture_mapping(
                 semantic_manifest=semantic_manifest,
                 semantic_manifest_lookup=semantic_manifest_lookup,
                 column_association_resolver=column_association_resolver,
+                data_set_mapping=data_set_mapping,
                 read_node_mapping=read_node_mapping,
                 dataflow_plan_builder=DataflowPlanBuilder(
                     source_nodes=source_nodes,
