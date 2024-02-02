@@ -36,7 +36,7 @@ from metricflow.test.query_rendering.compare_rendered_query import convert_and_c
 from metricflow.test.time.metric_time_dimension import MTD_SPEC_DAY
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def dataflow_plan_builder(  # noqa: D
     mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> DataflowPlanBuilder:
@@ -50,7 +50,7 @@ def dataflow_to_sql_converter(  # noqa: D
     return mf_engine_test_fixture_mapping[SemanticManifestName.SIMPLE_MANIFEST].dataflow_to_sql_converter
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def multihop_dataflow_plan_builder(  # noqa: D
     mf_engine_test_fixture_mapping: Mapping[SemanticManifestName, MetricFlowEngineTestFixture]
 ) -> DataflowPlanBuilder:
