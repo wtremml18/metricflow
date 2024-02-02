@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Mapping, OrderedDict
+from typing import Dict, Mapping, OrderedDict, Sequence
 
 import pytest
 from dbt_semantic_interfaces.protocols import SemanticManifest
@@ -11,7 +11,7 @@ from dbt_semantic_interfaces.test_utils import as_datetime
 
 from metricflow.dataflow.builder.dataflow_plan_builder import DataflowPlanBuilder
 from metricflow.dataflow.builder.node_data_set import DataflowPlanNodeOutputDataSetResolver
-from metricflow.dataflow.dataflow_plan import ReadSqlSourceNode
+from metricflow.dataflow.dataflow_plan import BaseOutput, ReadSqlSourceNode
 from metricflow.dataset.semantic_model_adapter import SemanticModelDataSet
 from metricflow.engine.metricflow_engine import MetricFlowEngine
 from metricflow.model.semantic_manifest_lookup import SemanticManifestLookup
@@ -60,6 +60,7 @@ class MetricFlowEngineTestFixture:
     column_association_resolver: ColumnAssociationResolver
     data_set_mapping: OrderedDict[str, SemanticModelDataSet]
     read_node_mapping: OrderedDict[str, ReadSqlSourceNode]
+    source_nodes: Sequence[BaseOutput]
     dataflow_plan_builder: DataflowPlanBuilder
     dataflow_to_sql_converter: DataflowToSqlQueryPlanConverter
     query_parser: MetricFlowQueryParser
@@ -99,6 +100,7 @@ def mf_engine_test_fixture_mapping(
                 column_association_resolver=column_association_resolver,
                 data_set_mapping=data_set_mapping,
                 read_node_mapping=read_node_mapping,
+                source_nodes=source_nodes,
                 dataflow_plan_builder=DataflowPlanBuilder(
                     source_nodes=source_nodes,
                     read_nodes=tuple(read_node_mapping.values()),
