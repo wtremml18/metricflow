@@ -11,6 +11,7 @@ import sqlalchemy
 
 from metricflow.dataflow.sql_table import SqlTable
 from metricflow.sql.sql_bind_parameters import SqlBindParameters
+from metricflow.sql_request.sql_request_attributes import SqlJsonTag, SqlRequestTagSet
 from metricflow.test.fixtures.sql_clients.base_sql_client_implementation import BaseSqlClientImplementation
 
 logger = logging.getLogger(__name__)
@@ -78,6 +79,8 @@ class SqlAlchemySqlClient(BaseSqlClientImplementation, ABC):
     def _engine_connection(
         self,
         engine: sqlalchemy.engine.Engine,
+        system_tags: SqlRequestTagSet = SqlRequestTagSet(),
+        extra_tags: SqlJsonTag = SqlJsonTag(),
     ) -> Iterator[sqlalchemy.engine.Connection]:
         """Context Manager for providing a configured connection."""
         conn = engine.connect()
@@ -90,16 +93,20 @@ class SqlAlchemySqlClient(BaseSqlClientImplementation, ABC):
         self,
         stmt: str,
         bind_params: SqlBindParameters,
+        system_tags: SqlRequestTagSet = SqlRequestTagSet(),
+        extra_tags: SqlJsonTag = SqlJsonTag(),
     ) -> pd.DataFrame:
-        with self._engine_connection(self._engine) as conn:
+        with self._engine_connection(self._engine, system_tags=system_tags, extra_tags=extra_tags) as conn:
             return pd.read_sql_query(sqlalchemy.text(stmt), conn, params=bind_params.param_dict)
 
     def _engine_specific_execute_implementation(
         self,
         stmt: str,
         bind_params: SqlBindParameters,
+        system_tags: SqlRequestTagSet = SqlRequestTagSet(),
+        extra_tags: SqlJsonTag = SqlJsonTag(),
     ) -> None:
-        with self._engine_connection(self._engine) as conn:
+        with self._engine_connection(self._engine, system_tags=system_tags, extra_tags=extra_tags) as conn:
             conn.execute(sqlalchemy.text(stmt), bind_params.param_dict)
 
     def _engine_specific_dry_run_implementation(self, stmt: str, bind_params: SqlBindParameters) -> None:  # noqa: D
