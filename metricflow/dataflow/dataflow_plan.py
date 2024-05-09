@@ -22,7 +22,7 @@ if typing.TYPE_CHECKING:
     from metricflow.dataflow.nodes.filter_elements import FilterElementsNode
     from metricflow.dataflow.nodes.join_conversion_events import JoinConversionEventsNode
     from metricflow.dataflow.nodes.join_over_time import JoinOverTimeRangeNode
-    from metricflow.dataflow.nodes.join_to_base import JoinToBaseOutputNode
+    from metricflow.dataflow.nodes.join_to_base import JoinOnEntitiesNode
     from metricflow.dataflow.nodes.join_to_time_spine import JoinToTimeSpineNode
     from metricflow.dataflow.nodes.metric_time_transform import MetricTimeDimensionTransformNode
     from metricflow.dataflow.nodes.min_max import MinMaxNode
@@ -75,7 +75,7 @@ class DataflowPlanNode(DagNode, Visitable, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def with_new_parents(self: NodeSelfT, new_parent_nodes: Sequence[BaseOutput]) -> NodeSelfT:
+    def with_new_parents(self: NodeSelfT, new_parent_nodes: Sequence[DataflowPlanNode]) -> NodeSelfT:
         """Creates a node with the same behavior as this node, but with a different set of parents.
 
         typing.Self would be useful here, but not available in Python 3.8.
@@ -86,6 +86,11 @@ class DataflowPlanNode(DagNode, Visitable, ABC):
     def node_type(self) -> Type:  # noqa: D102
         # TODO: Remove.
         return self.__class__
+
+    @property
+    def is_aggregated_to_elements(self) -> Set[LinkableElementReference]:
+        """Indicates that the node has been aggregated to these specs, guaranteeing uniqueness in all combinations."""
+        return set()
 
 
 class DataflowPlanNodeVisitor(Generic[VisitorOutputT], ABC):
@@ -101,7 +106,7 @@ class DataflowPlanNodeVisitor(Generic[VisitorOutputT], ABC):
         pass
 
     @abstractmethod
-    def visit_join_to_base_output_node(self, node: JoinToBaseOutputNode) -> VisitorOutputT:  # noqa: D102
+    def visit_join_on_entities_node(self, node: JoinOnEntitiesNode) -> VisitorOutputT:  # noqa: D102
         pass
 
     @abstractmethod
@@ -171,62 +176,12 @@ class DataflowPlanNodeVisitor(Generic[VisitorOutputT], ABC):
         pass
 
 
-class BaseOutput(DataflowPlanNode, ABC):
-    """A node that outputs data in a "base" format.
-
-    The base format is where the columns represent un-aggregated measures, dimensions, and entities.
-    """
-
-    @property
-    def is_aggregated_to_elements(self) -> Set[LinkableElementReference]:
-        """Indicates that the node has been aggregated to these specs, guaranteeing uniqueness in each combination of them."""
-        return set()
-
-
-class AggregatedMeasuresOutput(BaseOutput, ABC):
-    """A node that outputs data where the measures are aggregated.
-
-    The measures are aggregated with respect to the present entities and dimensions.
-    """
-
-    pass
-
-
-class ComputedMetricsOutput(BaseOutput, ABC):
-    """A node that outputs data that contains metrics computed from measures."""
-
-    pass
-
-
-class SinkNodeVisitor(Generic[VisitorOutputT], ABC):
-    """Similar to DataflowPlanNodeVisitor, but only for sink nodes."""
-
-    @abstractmethod
-    def visit_write_to_result_dataframe_node(self, node: WriteToResultDataframeNode) -> VisitorOutputT:  # noqa: D102
-        pass
-
-    @abstractmethod
-    def visit_write_to_result_table_node(self, node: WriteToResultTableNode) -> VisitorOutputT:  # noqa: D102
-        pass
-
-
-class SinkOutput(DataflowPlanNode, ABC):
-    """A node where incoming data goes out of the graph."""
-
-    @abstractmethod
-    def accept_sink_node_visitor(self, visitor: SinkNodeVisitor[VisitorOutputT]) -> VisitorOutputT:  # noqa: D102
-        pass
-
-    @property
-    @abstractmethod
-    def parent_node(self) -> BaseOutput:  # noqa: D102
-        pass
-
-
-class DataflowPlan(MetricFlowDag[SinkOutput]):
+class DataflowPlan(MetricFlowDag[DataflowPlanNode]):
     """Describes the flow of metric data as it goes from source nodes to sink nodes in the graph."""
 
-    def __init__(self, sink_output_nodes: Sequence[SinkOutput], plan_id: Optional[DagId] = None) -> None:  # noqa: D107
+    def __init__(  # noqa: D107
+        self, sink_output_nodes: Sequence[DataflowPlanNode], plan_id: Optional[DagId] = None
+    ) -> None:
         if len(sink_output_nodes) == 0:
             raise RuntimeError("Can't create a dataflow plan without sink node(s).")
         self._sink_output_nodes = tuple(sink_output_nodes)
@@ -236,10 +191,10 @@ class DataflowPlan(MetricFlowDag[SinkOutput]):
         )
 
     @property
-    def sink_output_nodes(self) -> Sequence[SinkOutput]:  # noqa: D102
+    def sink_output_nodes(self) -> Sequence[DataflowPlanNode]:  # noqa: D102
         return self._sink_output_nodes
 
     @property
-    def sink_output_node(self) -> SinkOutput:  # noqa: D102
+    def sink_output_node(self) -> DataflowPlanNode:  # noqa: D102
         assert len(self._sink_output_nodes) == 1, f"Only 1 sink node supported. Got: {self._sink_output_nodes}"
         return self._sink_output_nodes[0]
