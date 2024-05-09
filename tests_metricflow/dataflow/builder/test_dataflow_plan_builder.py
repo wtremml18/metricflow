@@ -362,7 +362,7 @@ def test_where_constrained_plan(
         metric_names=("bookings",),
         group_by_names=("booking__is_instant",),
         where_constraint_str="{{ Dimension('listing__country_latest') }} = 'us'",
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -391,7 +391,7 @@ def test_where_constrained_plan_time_dimension(
         metric_names=("bookings",),
         group_by_names=("booking__is_instant",),
         where_constraint_str="{{ TimeDimension('metric_time', 'day') }} >= '2020-01-01'",
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -421,7 +421,7 @@ def test_where_constrained_with_common_linkable_plan(
         metric_names=("bookings",),
         group_by_names=("listing__country_latest",),
         where_constraint_str="{{ Dimension('listing__country_latest') }} = 'us'",
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -560,7 +560,7 @@ def test_distinct_values_plan(
         where_constraint_str="{{ Dimension('listing__country_latest') }} = 'us'",
         order_by_names=("-listing__country_latest",),
         limit=100,
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan_for_distinct_values(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -590,7 +590,7 @@ def test_distinct_values_plan_with_join(
         where_constraint_str="{{ Dimension('listing__country_latest') }} = 'us'",
         order_by_names=("-listing__is_lux_latest",),
         limit=100,
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan_for_distinct_values(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -618,7 +618,7 @@ def test_measure_constraint_plan(
     query_spec = query_parser.parse_and_validate_query(
         metric_names=("lux_booking_value_rate_expr",),
         group_by_names=(METRIC_TIME_ELEMENT_NAME,),
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -646,7 +646,7 @@ def test_measure_constraint_with_reused_measure_plan(
     query_spec = query_parser.parse_and_validate_query(
         metric_names=("instant_booking_value_ratio",),
         group_by_names=(METRIC_TIME_ELEMENT_NAME,),
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -1198,7 +1198,7 @@ def test_join_to_time_spine_with_filters(
         ),
         time_constraint_start=datetime.datetime(2020, 1, 3),
         time_constraint_end=datetime.datetime(2020, 1, 5),
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -1229,7 +1229,7 @@ def test_offset_window_metric_filter_and_query_have_different_granularities(
         where_constraint=PydanticWhereFilter(
             where_sql_template=("{{ TimeDimension('metric_time', 'day') }} = '2020-01-01'")
         ),
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -1260,7 +1260,7 @@ def test_offset_to_grain_metric_filter_and_query_have_different_granularities(
         where_constraint=PydanticWhereFilter(
             where_sql_template=("{{ TimeDimension('metric_time', 'day') }} = '2020-01-01'")
         ),
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -1287,7 +1287,7 @@ def test_metric_in_query_where_filter(
     """Test querying a metric that has a metric in its where filter."""
     query_spec = query_parser.parse_and_validate_query(
         metric_names=("listings",), where_constraint_str="{{ Metric('bookings', ['listing'])}} > 2"
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -1314,7 +1314,7 @@ def test_metric_in_metric_where_filter(
     """Test querying a metric that has a metric in its where filter."""
     query_spec = query_parser.parse_and_validate_query(
         metric_names=("active_listings",),
-    )
+    ).query_spec
     dataflow_plan = dataflow_plan_builder.build_plan(query_spec)
 
     assert_plan_snapshot_text_equal(
@@ -1351,5 +1351,5 @@ def test_all_available_single_join_metric_filters(
                         metric_name=linkable_metric.element_name, entity_name=entity_spec.element_name
                     ),
                 ),
-            )
+            ).query_spec
             dataflow_plan_builder.build_plan(query_spec)
