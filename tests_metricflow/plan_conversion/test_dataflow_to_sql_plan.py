@@ -532,7 +532,7 @@ def test_compute_metrics_node_simple_expr(
     )
 
     sink_node = WriteToResultDataframeNode(compute_metrics_node)
-    dataflow_plan = DataflowPlan(sink_output_nodes=[sink_node], plan_id=DagId.from_str("plan0"))
+    dataflow_plan = DataflowPlan(sink_nodes=[sink_node], plan_id=DagId.from_str("plan0"))
 
     assert_plan_snapshot_text_equal(
         request=request,
@@ -604,7 +604,7 @@ def test_join_to_time_spine_node_without_offset(
         join_type=SqlJoinType.INNER,
     )
     sink_node = WriteToResultDataframeNode(join_to_time_spine_node)
-    dataflow_plan = DataflowPlan(sink_output_nodes=[sink_node], plan_id=DagId.from_str("plan0"))
+    dataflow_plan = DataflowPlan(sink_nodes=[sink_node], plan_id=DagId.from_str("plan0"))
 
     assert_plan_snapshot_text_equal(
         request=request,
@@ -677,7 +677,7 @@ def test_join_to_time_spine_node_with_offset_window(
     )
 
     sink_node = WriteToResultDataframeNode(join_to_time_spine_node)
-    dataflow_plan = DataflowPlan(sink_output_nodes=[sink_node], plan_id=DagId.from_str("plan0"))
+    dataflow_plan = DataflowPlan(sink_nodes=[sink_node], plan_id=DagId.from_str("plan0"))
 
     assert_plan_snapshot_text_equal(
         request=request,
@@ -751,7 +751,7 @@ def test_join_to_time_spine_node_with_offset_to_grain(
     )
 
     sink_node = WriteToResultDataframeNode(join_to_time_spine_node)
-    dataflow_plan = DataflowPlan(sink_output_nodes=[sink_node], plan_id=DagId.from_str("plan0"))
+    dataflow_plan = DataflowPlan(sink_nodes=[sink_node], plan_id=DagId.from_str("plan0"))
 
     assert_plan_snapshot_text_equal(
         request=request,
@@ -1099,7 +1099,7 @@ def test_compute_metrics_node_ratio_from_multiple_semantic_models(
         mf_test_configuration=mf_test_configuration,
         dataflow_to_sql_converter=dataflow_to_sql_converter,
         sql_client=sql_client,
-        node=dataflow_plan.sink_output_node,
+        node=dataflow_plan.checked_sink_node,
     )
 
 
@@ -1185,7 +1185,7 @@ def test_dimensions_requiring_join(
         mf_test_configuration=mf_test_configuration,
         dataflow_to_sql_converter=dataflow_to_sql_converter,
         sql_client=sql_client,
-        node=dataflow_plan.sink_output_node,
+        node=dataflow_plan.checked_sink_node,
     )
 
 
@@ -1211,5 +1211,5 @@ def test_dimension_with_joined_where_constraint(
         mf_test_configuration=mf_test_configuration,
         dataflow_to_sql_converter=dataflow_to_sql_converter,
         sql_client=sql_client,
-        node=dataflow_plan.sink_output_node,
+        node=dataflow_plan.checked_sink_node,
     )
