@@ -109,7 +109,7 @@
                                     <!-- include_spec =                                                        -->
                                     <!--   TimeDimensionSpec(element_name='metric_time', time_granularity=DAY) -->
                                     <!-- distinct = False -->
-                                    <JoinToBaseOutputNode>
+                                    <JoinOnEntitiesNode>
                                         <!-- description = 'Join Standard Outputs' -->
                                         <!-- node_id = NodeId(id_str='jso_0') -->
                                         <!-- join0_for_node_id_pfe_1 =                                      -->
@@ -158,7 +158,7 @@
                                                 </ReadSqlSourceNode>
                                             </MetricTimeDimensionTransformNode>
                                         </FilterElementsNode>
-                                    </JoinToBaseOutputNode>
+                                    </JoinOnEntitiesNode>
                                 </FilterElementsNode>
                             </WhereConstraintNode>
                         </FilterElementsNode>
@@ -264,7 +264,7 @@
                                     <!-- include_spec =                                                        -->
                                     <!--   TimeDimensionSpec(element_name='metric_time', time_granularity=DAY) -->
                                     <!-- distinct = False -->
-                                    <JoinToBaseOutputNode>
+                                    <JoinOnEntitiesNode>
                                         <!-- description = 'Join Standard Outputs' -->
                                         <!-- node_id = NodeId(id_str='jso_1') -->
                                         <!-- join0_for_node_id_pfe_5 =                                      -->
@@ -312,7 +312,7 @@
                                                 </ReadSqlSourceNode>
                                             </MetricTimeDimensionTransformNode>
                                         </FilterElementsNode>
-                                    </JoinToBaseOutputNode>
+                                    </JoinOnEntitiesNode>
                                 </FilterElementsNode>
                             </WhereConstraintNode>
                         </FilterElementsNode>
