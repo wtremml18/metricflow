@@ -520,6 +520,12 @@ class MetricFlowQueryResolver:
                 queried_semantic_models=(),
             )
 
+        model_reference_set = set(resolve_group_by_item_result.linkable_element_set.derived_from_semantic_models)
+        for filter_spec_resolution in filter_spec_lookup.spec_resolutions:
+            model_reference_set.update(
+                set(filter_spec_resolution.resolved_linkable_element_set.derived_from_semantic_models)
+            )
+
         return MetricFlowQueryResolution(
             query_spec=MetricFlowQuerySpec(
                 metric_specs=metric_specs,
@@ -536,6 +542,9 @@ class MetricFlowQueryResolver:
             filter_spec_lookup=filter_spec_lookup,
             input_to_issue_set=issue_set_mapping,
             queried_semantic_models=tuple(
-                resolve_group_by_item_result.linkable_element_set.derived_from_semantic_models
+                sorted(
+                    model_reference_set,
+                    key=lambda model_reference: model_reference.semantic_model_name,
+                )
             ),
         )
