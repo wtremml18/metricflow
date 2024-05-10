@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import logging
 from dataclasses import dataclass
 from typing import List, Optional, Sequence, Tuple
@@ -61,6 +62,7 @@ from metricflow_semantics.specs.spec_classes import (
     OrderBySpec,
 )
 from metricflow_semantics.specs.spec_set import group_specs_by_type
+from metricflow_semantics.workarounds.reference import sorted_semantic_model_references
 
 logger = logging.getLogger(__name__)
 
@@ -526,6 +528,26 @@ class MetricFlowQueryResolver:
                 set(filter_spec_resolution.resolved_linkable_element_set.derived_from_semantic_models)
             )
 
+        semantic_models_in_group_by_items = set(
+            resolve_group_by_item_result.linkable_element_set.derived_from_semantic_models
+        )
+        semantic_models_in_filters = set(
+            itertools.chain.from_iterable(
+                filter_spec_resolution.resolved_linkable_element_set.derived_from_semantic_models
+                for filter_spec_resolution in filter_spec_lookup.spec_resolutions
+            )
+        )
+        resolution_dag_node_set = resolution_dag.sink_node.inclusive_ancestors()
+        measure_semantic_models = set(
+            self._manifest_lookup.semantic_model_lookup.get_semantic_model_for_measure(
+                measure_node.measure_reference
+            ).reference
+            for measure_node in resolution_dag_node_set.measure_nodes
+        )
+        queried_semantic_models = sorted_semantic_model_references(
+            set.union(semantic_models_in_group_by_items, semantic_models_in_filters, measure_semantic_models)
+        )
+
         return MetricFlowQueryResolution(
             query_spec=MetricFlowQuerySpec(
                 metric_specs=metric_specs,
@@ -541,10 +563,5 @@ class MetricFlowQueryResolver:
             resolution_dag=resolution_dag,
             filter_spec_lookup=filter_spec_lookup,
             input_to_issue_set=issue_set_mapping,
-            queried_semantic_models=tuple(
-                sorted(
-                    model_reference_set,
-                    key=lambda model_reference: model_reference.semantic_model_name,
-                )
-            ),
+            queried_semantic_models=queried_semantic_models,
         )

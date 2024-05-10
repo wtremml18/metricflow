@@ -14,6 +14,7 @@ from dbt_semantic_interfaces.test_utils import as_datetime
 from dbt_semantic_interfaces.type_enums.date_part import DatePart
 from dbt_semantic_interfaces.type_enums.time_granularity import TimeGranularity
 from metricflow_semantics.model.semantic_manifest_lookup import SemanticManifestLookup
+from metricflow_semantics.model.semantic_model_derivation import SemanticModelDerivation
 from metricflow_semantics.protocols.query_parameter import DimensionOrEntityQueryParameter
 from metricflow_semantics.specs.dunder_column_association_resolver import DunderColumnAssociationResolver
 from metricflow_semantics.specs.query_param_implementations import DimensionOrEntityParameter, TimeDimensionParameter
@@ -37,6 +38,7 @@ from metricflow.sql.sql_exprs import (
     SqlSubtractTimeIntervalExpression,
 )
 from tests_metricflow.compare_df import assert_dataframes_equal
+from tests_metricflow.dataflow.optimizer.source_scan.test_source_scan_optimizer import DataflowPlanLookup
 from tests_metricflow.integration.configured_test_case import (
     CONFIGURED_INTEGRATION_TESTS_REPOSITORY,
     IntegrationTestModel,
@@ -363,10 +365,14 @@ def test_case(
     assert_dataframes_equal(actual, expected, sort_columns=not case.check_order, allow_empty=case.allow_empty)
 
     # Check that the parse result and the dataflow plan show the same semantic models read.
-    # parse_query_result = query_result.explain_result.parse_query_result
-    # parser_queried_semantic_models = parse_query_result.queried_semantic_models
-    #
-    # dataflow_plan_lookup = DataflowPlanLookup(query_result.dataflow_plan)
-    # dataflow_queried_semantic_models = dataflow_plan_lookup.read_semantic_models()
-    #
-    # assert tuple(parser_queried_semantic_models) == tuple(dataflow_queried_semantic_models)
+    parse_query_result = query_result.explain_result.parse_query_result
+    parser_queried_semantic_models = tuple(
+        model_reference
+        for model_reference in parse_query_result.queried_semantic_models
+        if model_reference != SemanticModelDerivation.VIRTUAL_SEMANTIC_MODEL_REFERENCE
+    )
+
+    dataflow_plan_lookup = DataflowPlanLookup(query_result.dataflow_plan)
+    dataflow_queried_semantic_models = dataflow_plan_lookup.read_semantic_models()
+
+    assert tuple(parser_queried_semantic_models) == tuple(dataflow_queried_semantic_models)
