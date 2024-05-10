@@ -61,7 +61,13 @@ class DataflowPlanLookup:
     def read_semantic_models(self) -> Sequence[SemanticModelReference]:
         """Returns all semantic models that are read in the plan."""
         read_nodes = self._dataflow_plan_sink_node.accept(_ReadSqlSourceNodeCollector())
-        read_semantic_models = set(read_node.data_set.semantic_model_reference for read_node in read_nodes)
+        read_semantic_models = set()
+
+        for read_node in read_nodes:
+            semantic_model_reference = read_node.data_set.semantic_model_reference
+            if semantic_model_reference is not None:
+                read_semantic_models.add(semantic_model_reference)
+
         return tuple(
             sorted(
                 read_semantic_models,
