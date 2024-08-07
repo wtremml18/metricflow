@@ -2,12 +2,6 @@ from __future__ import annotations
 
 from typing import Optional, Sequence
 
-from dbt_semantic_interfaces.call_parameter_sets import (
-    DimensionCallParameterSet,
-    EntityCallParameterSet,
-    MetricCallParameterSet,
-    TimeDimensionCallParameterSet,
-)
 from dbt_semantic_interfaces.naming.dundered import StructuredDunderedName
 from dbt_semantic_interfaces.naming.keywords import DUNDER
 from dbt_semantic_interfaces.parsing.text_input.ti_description import ObjectBuilderItemDescription, QueryItemType
@@ -27,30 +21,6 @@ class ObjectBuilderNameConverter:
 
     TODO: CallParameterSets / QueryParameter objects need restructuring.
     """
-
-    @staticmethod
-    def input_str_from_entity_call_parameter_set(parameter_set: EntityCallParameterSet) -> str:  # noqa: D102
-        initializer_parameter_str = ObjectBuilderNameConverter.initializer_parameter_str(
-            element_name=parameter_set.entity_reference.element_name,
-            entity_links=parameter_set.entity_path,
-            group_by=(),
-            time_granularity=None,
-            date_part=None,
-        )
-        return f"Entity({initializer_parameter_str})"
-
-    @staticmethod
-    def input_str_from_metric_call_parameter_set(parameter_set: MetricCallParameterSet) -> str:  # noqa: D102
-        initializer_parameter_str = ObjectBuilderNameConverter.initializer_parameter_str(
-            element_name=parameter_set.metric_reference.element_name,
-            entity_links=(),
-            group_by=tuple(
-                EntityReference(element_name=group_by_ref.element_name) for group_by_ref in parameter_set.group_by
-            ),
-            time_granularity=None,
-            date_part=None,
-        )
-        return f"Metric({initializer_parameter_str})"
 
     @staticmethod
     def input_str_from_description(description: ObjectBuilderItemDescription) -> str:  # noqa: D102
@@ -166,27 +136,3 @@ class ObjectBuilderNameConverter:
             raise RuntimeError(f"Did not get exactly 1 name from {instance_spec}. Got {names}")
 
         return names[0]
-
-    @staticmethod
-    def input_str_from_dimension_call_parameter_set(parameter_set: DimensionCallParameterSet) -> str:  # noqa: D102
-        initializer_parameter_str = ObjectBuilderNameConverter.initializer_parameter_str(
-            element_name=parameter_set.dimension_reference.element_name,
-            entity_links=parameter_set.entity_path,
-            group_by=(),
-            time_granularity=None,
-            date_part=None,
-        )
-        return f"Dimension({initializer_parameter_str})"
-
-    @staticmethod
-    def input_str_from_time_dimension_call_parameter_set(  # noqa: D102
-        parameter_set: TimeDimensionCallParameterSet,
-    ) -> str:
-        initializer_parameter_str = ObjectBuilderNameConverter.initializer_parameter_str(
-            element_name=parameter_set.time_dimension_reference.element_name,
-            entity_links=parameter_set.entity_path,
-            group_by=(),
-            time_granularity=None,
-            date_part=None,
-        )
-        return f"TimeDimension({initializer_parameter_str})"

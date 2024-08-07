@@ -1,20 +1,16 @@
 from __future__ import annotations
 
-import itertools
 import logging
 from collections import defaultdict
-from typing import Dict, List, Sequence, Set
+from typing import Dict, List, Set
 
 from dbt_semantic_interfaces.call_parameter_sets import (
-    FilterCallParameterSets,
-    MetricCallParameterSet,
     ParseWhereFilterException,
 )
 from dbt_semantic_interfaces.implementations.filters.where_filter import PydanticWhereFilterIntersection
 from dbt_semantic_interfaces.parsing.text_input.ti_description import ObjectBuilderItemDescription
 from dbt_semantic_interfaces.parsing.where_filter.where_filter_parser import WhereFilterParser
 from dbt_semantic_interfaces.protocols import WhereFilter
-from dbt_semantic_interfaces.references import EntityReference
 from typing_extensions import override
 
 from metricflow_semantics.collection_helpers.dedupe import ordered_dedupe
@@ -34,7 +30,6 @@ from metricflow_semantics.query.group_by_item.filter_spec_resolution.filter_spec
     FilterSpecResolution,
     FilterSpecResolutionLookUp,
     NonParsableFilterResolution,
-    PatternAssociationForWhereFilterGroupByItem,
     ResolvedSpecLookUpKey,
 )
 from metricflow_semantics.query.group_by_item.group_by_item_resolver import GroupByItemResolver
@@ -115,117 +110,6 @@ class _ResolveWhereFilterSpecVisitor(GroupByItemResolutionNodeVisitor[FilterSpec
         self._manifest_lookup = manifest_lookup
         self._path_from_start_node_tracker = DagTraversalPathTracker()
         self._spec_pattern_factory = spec_pattern_factory
-
-    @staticmethod
-    def _dedupe_filter_call_parameter_sets(
-        filter_call_parameter_sets_sequence: Sequence[FilterCallParameterSets],
-    ) -> FilterCallParameterSets:
-        # FilterCallParameterSets needs an update.
-        return FilterCallParameterSets(
-            dimension_call_parameter_sets=tuple(
-                dict.fromkeys(
-                    itertools.chain.from_iterable(
-                        filter_call_parameter_sets.dimension_call_parameter_sets
-                        for filter_call_parameter_sets in filter_call_parameter_sets_sequence
-                    )
-                )
-            ),
-            time_dimension_call_parameter_sets=tuple(
-                dict.fromkeys(
-                    itertools.chain.from_iterable(
-                        filter_call_parameter_sets.time_dimension_call_parameter_sets
-                        for filter_call_parameter_sets in filter_call_parameter_sets_sequence
-                    )
-                )
-            ),
-            entity_call_parameter_sets=tuple(
-                dict.fromkeys(
-                    itertools.chain.from_iterable(
-                        filter_call_parameter_sets.entity_call_parameter_sets
-                        for filter_call_parameter_sets in filter_call_parameter_sets_sequence
-                    )
-                )
-            ),
-            metric_call_parameter_sets=tuple(
-                dict.fromkeys(
-                    itertools.chain.from_iterable(
-                        filter_call_parameter_sets.metric_call_parameter_sets
-                        for filter_call_parameter_sets in filter_call_parameter_sets_sequence
-                    )
-                )
-            ),
-        )
-
-    def _map_filter_parameter_sets_to_pattern(
-        self,
-        filter_call_parameter_sets: FilterCallParameterSets,
-    ) -> Sequence[PatternAssociationForWhereFilterGroupByItem]:
-        """Given the call parameter sets in a filter, map them to spec patterns.
-
-        If a given call parameter set has already been resolved and in spec_resolution_lookup_so_far, it is skipped and
-        not returned in the dictionary.
-
-        This assumes that the items in filter_call_parameter_sets have been deduped.
-        """
-        patterns_in_filter: List[PatternAssociationForWhereFilterGroupByItem] = []
-        for dimension_call_parameter_set in filter_call_parameter_sets.dimension_call_parameter_sets:
-            patterns_in_filter.append(
-                PatternAssociationForWhereFilterGroupByItem(
-                    call_parameter_set=dimension_call_parameter_set,
-                    object_builder_str=ObjectBuilderNameConverter.input_str_from_dimension_call_parameter_set(
-                        dimension_call_parameter_set
-                    ),
-                    spec_pattern=self._spec_pattern_factory.create_for_dimension_call_parameter_set(
-                        dimension_call_parameter_set
-                    ),
-                )
-            )
-        for time_dimension_call_parameter_set in filter_call_parameter_sets.time_dimension_call_parameter_sets:
-            patterns_in_filter.append(
-                PatternAssociationForWhereFilterGroupByItem(
-                    call_parameter_set=time_dimension_call_parameter_set,
-                    object_builder_str=ObjectBuilderNameConverter.input_str_from_time_dimension_call_parameter_set(
-                        time_dimension_call_parameter_set
-                    ),
-                    spec_pattern=self._spec_pattern_factory.create_for_time_dimension_call_parameter_set(
-                        time_dimension_call_parameter_set
-                    ),
-                )
-            )
-        for entity_call_parameter_set in filter_call_parameter_sets.entity_call_parameter_sets:
-            patterns_in_filter.append(
-                PatternAssociationForWhereFilterGroupByItem(
-                    call_parameter_set=entity_call_parameter_set,
-                    object_builder_str=ObjectBuilderNameConverter.input_str_from_entity_call_parameter_set(
-                        entity_call_parameter_set
-                    ),
-                    spec_pattern=self._spec_pattern_factory.create_for_entity_call_parameter_set(
-                        entity_call_parameter_set
-                    ),
-                )
-            )
-        for metric_call_parameter_set in filter_call_parameter_sets.metric_call_parameter_sets:
-            # Convert LinkableElementReferences to EntityReferences. Will need to support dimensions later.
-            updated_metric_call_parameter_set = MetricCallParameterSet(
-                metric_reference=metric_call_parameter_set.metric_reference,
-                group_by=tuple(
-                    EntityReference(element_name=group_by_ref.element_name)
-                    for group_by_ref in metric_call_parameter_set.group_by
-                ),
-            )
-            patterns_in_filter.append(
-                PatternAssociationForWhereFilterGroupByItem(
-                    call_parameter_set=updated_metric_call_parameter_set,
-                    object_builder_str=ObjectBuilderNameConverter.input_str_from_metric_call_parameter_set(
-                        metric_call_parameter_set
-                    ),
-                    spec_pattern=self._spec_pattern_factory.create_for_metric_call_parameter_set(
-                        metric_call_parameter_set
-                    ),
-                )
-            )
-
-        return patterns_in_filter
 
     @override
     def visit_measure_node(self, node: MeasureGroupByItemSourceNode) -> FilterSpecResolutionLookUp:
