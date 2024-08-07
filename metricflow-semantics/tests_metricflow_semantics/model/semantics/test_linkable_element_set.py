@@ -701,7 +701,7 @@ def test_derived_semantic_models(linkable_set: LinkableElementSet) -> None:
 def test_filter_by_pattern(linkable_set: LinkableElementSet) -> None:
     """Tests that the specs produced by the set are properly filtered by spec patterns."""
     spec_pattern = EntityLinkPattern(
-        EntityLinkPatternParameterSet(
+        EntityLinkPatternParameterSet.from_parameters(
             fields_to_compare=(ParameterSetField.ENTITY_LINKS,),
             element_name=None,
             entity_links=(EntityReference("entity_1"),),

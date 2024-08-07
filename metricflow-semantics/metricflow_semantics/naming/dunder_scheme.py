@@ -4,6 +4,7 @@ import re
 from typing import Optional, Sequence, Tuple
 
 from dbt_semantic_interfaces.naming.keywords import DUNDER
+from dbt_semantic_interfaces.parsing.text_input.ti_description import QueryItemType
 from dbt_semantic_interfaces.references import EntityReference
 from dbt_semantic_interfaces.type_enums import TimeGranularity
 from dbt_semantic_interfaces.type_enums.date_part import DatePart
@@ -89,6 +90,7 @@ class DunderNamingScheme(QueryItemNamingScheme):
             if len(input_str_parts) == 2:
                 return EntityLinkPattern(
                     parameter_set=EntityLinkPatternParameterSet.from_parameters(
+                        element_types=(QueryItemType.TIME_DIMENSION,),
                         element_name=input_str_parts[0],
                         entity_links=(),
                         time_granularity=time_grain,
@@ -99,6 +101,7 @@ class DunderNamingScheme(QueryItemNamingScheme):
             # e.g. "messages__ds__month"
             return EntityLinkPattern(
                 parameter_set=EntityLinkPatternParameterSet.from_parameters(
+                    element_types=(QueryItemType.TIME_DIMENSION,),
                     element_name=input_str_parts[-2],
                     entity_links=tuple(EntityReference(entity_name) for entity_name in input_str_parts[:-2]),
                     time_granularity=time_grain,

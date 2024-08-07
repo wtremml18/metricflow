@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
+from dbt_semantic_interfaces.parsing.text_input.ti_description import QueryItemType
 from dbt_semantic_interfaces.protocols import ProtocolHint
 from dbt_semantic_interfaces.references import EntityReference
 from dbt_semantic_interfaces.type_enums.date_part import DatePart
@@ -58,6 +59,7 @@ class TimeDimensionParameter(ProtocolHint[TimeDimensionQueryParameter]):
             input_obj_naming_scheme=ObjectBuilderNamingScheme(),
             spec_pattern=EntityLinkPattern(
                 EntityLinkPatternParameterSet.from_parameters(
+                    element_types=(QueryItemType.TIME_DIMENSION,),
                     fields_to_compare=tuple(fields_to_compare),
                     element_name=name_structure.element_name,
                     entity_links=tuple(EntityReference(link_name) for link_name in name_structure.entity_link_names),
@@ -90,6 +92,7 @@ class DimensionOrEntityParameter(ProtocolHint[DimensionOrEntityQueryParameter]):
             input_obj_naming_scheme=ObjectBuilderNamingScheme(),
             spec_pattern=EntityLinkPattern(
                 EntityLinkPatternParameterSet.from_parameters(
+                    element_types=(QueryItemType.DIMENSION, QueryItemType.TIME_DIMENSION, QueryItemType.ENTITY),
                     fields_to_compare=(
                         ParameterSetField.ELEMENT_NAME,
                         ParameterSetField.ENTITY_LINKS,
