@@ -5,14 +5,22 @@ import logging
 from collections import defaultdict
 from typing import Dict, List, Sequence, Set
 
-from dbt_semantic_interfaces.call_parameter_sets import FilterCallParameterSets, MetricCallParameterSet
+from dbt_semantic_interfaces.call_parameter_sets import (
+    FilterCallParameterSets,
+    MetricCallParameterSet,
+    ParseWhereFilterException,
+)
 from dbt_semantic_interfaces.implementations.filters.where_filter import PydanticWhereFilterIntersection
+from dbt_semantic_interfaces.parsing.text_input.ti_processor import QueryItemTextProcessor
+from dbt_semantic_interfaces.parsing.text_input.valid_method import ConfiguredValidMethodMapping
 from dbt_semantic_interfaces.protocols import WhereFilter
 from dbt_semantic_interfaces.references import EntityReference
 from typing_extensions import override
 
+from metricflow_semantics.collection_helpers.dedupe import ordered_dedupe
 from metricflow_semantics.mf_logging.runtime import log_runtime
 from metricflow_semantics.model.semantic_manifest_lookup import SemanticManifestLookup
+from metricflow_semantics.naming.mf_query_item_description import MetricFlowQueryItemDescription
 from metricflow_semantics.naming.object_builder_str import ObjectBuilderNameConverter
 from metricflow_semantics.query.group_by_item.candidate_push_down.push_down_visitor import DagTraversalPathTracker
 from metricflow_semantics.query.group_by_item.filter_spec_resolution.filter_location import (
@@ -324,15 +332,22 @@ class _ResolveWhereFilterSpecVisitor(GroupByItemResolutionNodeVisitor[FilterSpec
             resolution_dag=resolution_dag,
         )
         non_parsable_resolutions: List[NonParsableFilterResolution] = []
-        filter_call_parameter_sets_by_location: Dict[WhereFilterLocation, List[FilterCallParameterSets]] = defaultdict(
+        item_descriptions_by_location: Dict[WhereFilterLocation, List[MetricFlowQueryItemDescription]] = defaultdict(
             list
         )
         # No input metric in locations when we get here
+        text_processor = QueryItemTextProcessor()
         for location, where_filters in where_filters_and_locations.items():
             for where_filter in where_filters:
                 try:
-                    filter_call_parameter_sets = where_filter.call_parameter_sets
-                except Exception as e:
+                    item_descriptions: Sequence[MetricFlowQueryItemDescription] = tuple(
+                        MetricFlowQueryItemDescription.create_from_dsi_item_description(dsi_item_description)
+                        for dsi_item_description in text_processor.collect_descriptions_from_template(
+                            jinja_template=where_filter.where_sql_template,
+                            valid_method_mapping=ConfiguredValidMethodMapping.DEFAULT_MAPPING,
+                        )
+                    )
+                except ParseWhereFilterException as e:
                     non_parsable_resolutions.append(
                         NonParsableFilterResolution(
                             filter_location_path=resolution_path,
@@ -355,24 +370,19 @@ class _ResolveWhereFilterSpecVisitor(GroupByItemResolutionNodeVisitor[FilterSpec
                         )
                     )
                     continue
-                filter_call_parameter_sets_by_location[location].append(filter_call_parameter_sets)
-
-        deduped_filter_call_parameter_sets_by_location = {
-            location: _ResolveWhereFilterSpecVisitor._dedupe_filter_call_parameter_sets(filter_call_parameter_sets_list)
-            for location, filter_call_parameter_sets_list in filter_call_parameter_sets_by_location.items()
-        }
+                item_descriptions_by_location[location].extend(item_descriptions)
 
         resolutions: List[FilterSpecResolution] = []
         for (
             filter_location,
-            deduped_filter_call_parameter_sets,
-        ) in deduped_filter_call_parameter_sets_by_location.items():
-            for group_by_item_in_where_filter in self._map_filter_parameter_sets_to_pattern(
-                filter_call_parameter_sets=deduped_filter_call_parameter_sets,
-            ):
+            item_descriptions,
+        ) in item_descriptions_by_location.items():
+            for item_description in ordered_dedupe(item_descriptions):
+                input_str = ObjectBuilderNameConverter.input_str_from_item_description(item_description)
+                spec_pattern = self._spec_pattern_factory.create_from_description(item_description)
                 group_by_item_resolution = group_by_item_resolver.resolve_matching_item_for_filters(
-                    input_str=group_by_item_in_where_filter.object_builder_str,
-                    spec_pattern=group_by_item_in_where_filter.spec_pattern,
+                    input_str=input_str,
+                    spec_pattern=spec_pattern,
                     resolution_node=current_node,
                     filter_location=filter_location,
                 )
@@ -387,16 +397,16 @@ class _ResolveWhereFilterSpecVisitor(GroupByItemResolutionNodeVisitor[FilterSpec
                     FilterSpecResolution(
                         lookup_key=ResolvedSpecLookUpKey(
                             filter_location=filter_location,
-                            call_parameter_set=group_by_item_in_where_filter.call_parameter_set,
+                            item_description=item_description,
                         ),
                         filter_location_path=resolution_path,
                         resolved_linkable_element_set=group_by_item_resolution.linkable_element_set,
                         where_filter_intersection=PydanticWhereFilterIntersection(
                             where_filters=list(where_filters_and_locations[filter_location])
                         ),
-                        spec_pattern=group_by_item_in_where_filter.spec_pattern,
+                        spec_pattern=spec_pattern,
                         issue_set=group_by_item_resolution.issue_set.with_path_prefix(path_prefix),
-                        object_builder_str=group_by_item_in_where_filter.object_builder_str,
+                        object_builder_str=input_str,
                     )
                 )
 

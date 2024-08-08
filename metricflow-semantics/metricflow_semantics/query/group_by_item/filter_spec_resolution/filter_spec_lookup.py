@@ -17,6 +17,7 @@ from metricflow_semantics.collection_helpers.merger import Mergeable
 from metricflow_semantics.mf_logging.formatting import indent
 from metricflow_semantics.mf_logging.pretty_print import mf_pformat
 from metricflow_semantics.model.semantics.linkable_element import LinkableElement
+from metricflow_semantics.naming.mf_query_item_description import MetricFlowQueryItemDescription
 from metricflow_semantics.query.group_by_item.filter_spec_resolution.filter_location import WhereFilterLocation
 from metricflow_semantics.query.group_by_item.path_prefixable import PathPrefixable
 from metricflow_semantics.query.group_by_item.resolution_path import MetricFlowQueryResolutionPath
@@ -151,16 +152,7 @@ class ResolvedSpecLookUpKey:
     """A key that associates a call parameter set and the filter where it is located."""
 
     filter_location: WhereFilterLocation
-    call_parameter_set: CallParameterSet
-
-    @staticmethod
-    def from_parameters(  # noqa: D102
-        filter_location: WhereFilterLocation, call_parameter_set: CallParameterSet
-    ) -> ResolvedSpecLookUpKey:
-        return ResolvedSpecLookUpKey(
-            filter_location=filter_location,
-            call_parameter_set=call_parameter_set,
-        )
+    item_description: MetricFlowQueryItemDescription
 
 
 @dataclass(frozen=True)
@@ -233,12 +225,16 @@ class PatternAssociationForWhereFilterGroupByItem:
 
     e.g. "{{ TimeDimension('metric_time', 'day') }} = '2020-01-01'" ->
         GroupByItemInWhereFilter(
-            call_parameter_set=TimeDimensionCallParameterSet('metric_time', DAY),
+            item_description=MetricFlowQueryItemDescription(
+                element_type=TIME_DIMENSION,
+                element_name'metric_time',
+                time_granularity=DAY,
+            ),
             input_str="TimeDimension('metric_time', 'day')",
             ...
         )
     """
 
-    call_parameter_set: CallParameterSet
+    item_description: MetricFlowQueryItemDescription
     object_builder_str: str
     spec_pattern: SpecPattern
