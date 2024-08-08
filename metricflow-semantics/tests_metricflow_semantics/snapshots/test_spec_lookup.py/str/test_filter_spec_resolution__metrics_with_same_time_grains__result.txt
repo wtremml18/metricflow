@@ -13,10 +13,9 @@ FilterSpecResolutionLookUp(
             ),
           ),
         ),
-        call_parameter_set=TimeDimensionCallParameterSet(
-          time_dimension_reference=TimeDimensionReference(
-            element_name='metric_time',
-          ),
+        item_description=QueryableItemDescription(
+          item_type=TIME_DIMENSION,
+          element_name='metric_time',
         ),
       ),
       where_filter_intersection=PydanticWhereFilterIntersection(
@@ -52,10 +51,10 @@ FilterSpecResolutionLookUp(
           ),
         },
       ),
-      spec_pattern=TimeDimensionPattern(
+      spec_pattern=EntityLinkPattern(
         parameter_set=EntityLinkPatternParameterSet(
           fields_to_compare=(DATE_PART, ELEMENT_NAME, ENTITY_LINKS),
-          element_types=(DIMENSION, ENTITY, METRIC, TIME_DIMENSION),
+          element_types=(TIME_DIMENSION,),
           element_name='metric_time',
         ),
       ),

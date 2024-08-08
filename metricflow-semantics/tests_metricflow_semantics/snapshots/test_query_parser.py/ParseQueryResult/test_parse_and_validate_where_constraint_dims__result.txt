@@ -25,14 +25,13 @@ ParseQueryResult(
                 ),
               ),
             ),
-            call_parameter_set=DimensionCallParameterSet(
-              entity_path=(
+            item_description=QueryableItemDescription(
+              item_type=DIMENSION,
+              element_name='is_instant',
+              entity_links=(
                 EntityReference(
                   element_name='booking',
                 ),
-              ),
-              dimension_reference=DimensionReference(
-                element_name='is_instant',
               ),
             ),
           ),
@@ -77,16 +76,15 @@ ParseQueryResult(
               ),
             },
           ),
-          spec_pattern=DimensionPattern(
+          spec_pattern=EntityLinkPattern(
             parameter_set=EntityLinkPatternParameterSet(
               fields_to_compare=(
+                DATE_PART,
                 ELEMENT_NAME,
                 ENTITY_LINKS,
               ),
               element_types=(
                 DIMENSION,
-                ENTITY,
-                METRIC,
                 TIME_DIMENSION,
               ),
               element_name='is_instant',
