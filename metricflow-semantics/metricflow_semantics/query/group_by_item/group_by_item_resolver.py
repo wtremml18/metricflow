@@ -4,9 +4,9 @@ import logging
 from dataclasses import dataclass
 from typing import Optional, Sequence, Tuple
 
-from dbt_semantic_interfaces.call_parameter_sets import TimeDimensionCallParameterSet
 from dbt_semantic_interfaces.naming.keywords import METRIC_TIME_ELEMENT_NAME
-from dbt_semantic_interfaces.references import SemanticModelReference, TimeDimensionReference
+from dbt_semantic_interfaces.parsing.text_input.ti_description import ObjectBuilderItemDescription, QueryItemType
+from dbt_semantic_interfaces.references import SemanticModelReference
 from dbt_semantic_interfaces.type_enums import TimeGranularity
 from typing_extensions import override
 
@@ -15,6 +15,7 @@ from metricflow_semantics.mf_logging.pretty_print import mf_pformat
 from metricflow_semantics.model.semantic_manifest_lookup import SemanticManifestLookup
 from metricflow_semantics.model.semantic_model_derivation import SemanticModelDerivation
 from metricflow_semantics.model.semantics.linkable_element_set import LinkableElementSet
+from metricflow_semantics.naming.mf_query_item_description import QueryableItemDescription
 from metricflow_semantics.naming.object_builder_scheme import ObjectBuilderNamingScheme
 from metricflow_semantics.query.group_by_item.candidate_push_down.push_down_visitor import (
     PushDownResult,
@@ -29,11 +30,11 @@ from metricflow_semantics.query.issues.issues_base import (
 )
 from metricflow_semantics.query.suggestion_generator import QueryItemSuggestionGenerator
 from metricflow_semantics.specs.instance_spec import LinkableInstanceSpec
+from metricflow_semantics.specs.patterns.entity_link_pattern import EntityLinkPattern
 from metricflow_semantics.specs.patterns.metric_time_default_granularity import MetricTimeDefaultGranularityPattern
 from metricflow_semantics.specs.patterns.minimum_time_grain import MinimumTimeGrainPattern
 from metricflow_semantics.specs.patterns.no_group_by_metric import NoGroupByMetricPattern
 from metricflow_semantics.specs.patterns.spec_pattern import SpecPattern
-from metricflow_semantics.specs.patterns.typed_patterns import TimeDimensionPattern
 from metricflow_semantics.specs.spec_set import InstanceSpecSet, group_specs_by_type
 
 logger = logging.getLogger(__name__)
@@ -228,10 +229,17 @@ class GroupByItemResolver:
     def resolve_min_metric_time_grain(self) -> TimeGranularity:
         """Returns the finest time grain of metric_time for querying."""
         metric_time_grain_resolution = self.resolve_matching_item_for_querying(
-            spec_pattern=TimeDimensionPattern.from_call_parameter_set(
-                TimeDimensionCallParameterSet(
-                    entity_path=(),
-                    time_dimension_reference=TimeDimensionReference(element_name=METRIC_TIME_ELEMENT_NAME),
+            spec_pattern=EntityLinkPattern.create_from_item_description(
+                QueryableItemDescription.create_from_object_builder_description(
+                    ObjectBuilderItemDescription(
+                        item_type=QueryItemType.TIME_DIMENSION,
+                        item_name=METRIC_TIME_ELEMENT_NAME,
+                        entity_path=(),
+                        group_by_for_metric_item=(),
+                        time_granularity_name=None,
+                        date_part_name=None,
+                        descending=None,
+                    )
                 )
             ),
             suggestion_generator=None,

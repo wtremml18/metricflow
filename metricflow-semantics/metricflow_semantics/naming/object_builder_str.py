@@ -8,7 +8,9 @@ from dbt_semantic_interfaces.call_parameter_sets import (
     MetricCallParameterSet,
     TimeDimensionCallParameterSet,
 )
+from dbt_semantic_interfaces.naming.dundered import StructuredDunderedName
 from dbt_semantic_interfaces.naming.keywords import DUNDER
+from dbt_semantic_interfaces.parsing.text_input.ti_description import ObjectBuilderItemDescription, QueryItemType
 from dbt_semantic_interfaces.references import EntityReference
 from dbt_semantic_interfaces.type_enums import TimeGranularity
 from dbt_semantic_interfaces.type_enums.date_part import DatePart
@@ -51,6 +53,22 @@ class ObjectBuilderNameConverter:
         return f"Metric({initializer_parameter_str})"
 
     @staticmethod
+    def input_str_from_description(description: ObjectBuilderItemDescription) -> str:  # noqa: D102
+        initializer_parameters = [repr(description.item_name)]
+        if description.time_granularity_name is not None:
+            initializer_parameters.append(
+                f"{description.time_granularity_name!r}",
+            )
+        if description.date_part_name is not None:
+            initializer_parameters.append(f"date_part_name={description.date_part_name!r}")
+        if len(description.entity_path) > 0:
+            initializer_parameters.append(f"entity_path={description.entity_path!r}")
+        if description.group_by_for_metric_item:
+            initializer_parameters.append(f"group_by={description.group_by_for_metric_item!r}")
+
+        return description.item_type.value + "(" + ", ".join(initializer_parameters) + ")"
+
+    @staticmethod
     def initializer_parameter_str(
         element_name: str,
         entity_links: Sequence[EntityReference],
@@ -69,15 +87,17 @@ class ObjectBuilderNameConverter:
         else:
             initializer_parameters.append(repr(element_name))
         if time_granularity is not None:
-            initializer_parameters.append(
-                f"'{time_granularity.value}'",
-            )
+            initializer_parameters.append(repr(time_granularity.value))
         if date_part is not None:
             initializer_parameters.append(f"date_part_name={repr(date_part.value)}")
         if len(entity_link_names) > 1:
             initializer_parameters.append(f"entity_path={repr(entity_link_names[:-1])}")
         if group_by:
-            initializer_parameters.append(f"group_by={[group_by_ref.element_name for group_by_ref in group_by]}")
+            structured_name = StructuredDunderedName(
+                element_name=group_by[0].element_name,
+                entity_links=tuple(group_by[:-1]),
+            )
+            initializer_parameters.append(f"group_by={[structured_name.dundered_name]}")
 
         return ", ".join(initializer_parameters)
 
@@ -104,7 +124,7 @@ class ObjectBuilderNameConverter:
                     time_granularity=None,
                     date_part=None,
                 )
-                names_to_return.append(f"Entity({initializer_parameter_str})")
+                names_to_return.append(f"{QueryItemType.ENTITY.value}({initializer_parameter_str})")
 
             for dimension_spec in spec_set.dimension_specs:
                 initializer_parameter_str = ObjectBuilderNameConverter.initializer_parameter_str(
@@ -114,7 +134,7 @@ class ObjectBuilderNameConverter:
                     time_granularity=None,
                     date_part=None,
                 )
-                names_to_return.append(f"Dimension({initializer_parameter_str})")
+                names_to_return.append(f"{QueryItemType.DIMENSION.value}({initializer_parameter_str})")
 
             for time_dimension_spec in spec_set.time_dimension_specs:
                 initializer_parameter_str = ObjectBuilderNameConverter.initializer_parameter_str(
@@ -124,7 +144,7 @@ class ObjectBuilderNameConverter:
                     time_granularity=time_dimension_spec.time_granularity,
                     date_part=time_dimension_spec.date_part,
                 )
-                names_to_return.append(f"TimeDimension({initializer_parameter_str})")
+                names_to_return.append(f"{QueryItemType.TIME_DIMENSION.value}({initializer_parameter_str})")
 
             for group_by_metric_spec in spec_set.group_by_metric_specs:
                 initializer_parameter_str = ObjectBuilderNameConverter.initializer_parameter_str(
@@ -134,7 +154,7 @@ class ObjectBuilderNameConverter:
                     time_granularity=None,
                     date_part=None,
                 )
-                names_to_return.append(f"Metric({initializer_parameter_str})")
+                names_to_return.append(f"{QueryItemType.METRIC.value}({initializer_parameter_str})")
 
             return names_to_return
 
