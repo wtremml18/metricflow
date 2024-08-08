@@ -11,16 +11,17 @@ from dbt_semantic_interfaces.call_parameter_sets import (
     ParseWhereFilterException,
 )
 from dbt_semantic_interfaces.implementations.filters.where_filter import PydanticWhereFilterIntersection
-from dbt_semantic_interfaces.parsing.text_input.ti_processor import QueryItemTextProcessor
-from dbt_semantic_interfaces.parsing.text_input.valid_method import ConfiguredValidMethodMapping
+from dbt_semantic_interfaces.parsing.text_input.ti_description import ObjectBuilderItemDescription
+from dbt_semantic_interfaces.parsing.where_filter.where_filter_parser import WhereFilterParser
 from dbt_semantic_interfaces.protocols import WhereFilter
 from dbt_semantic_interfaces.references import EntityReference
 from typing_extensions import override
 
 from metricflow_semantics.collection_helpers.dedupe import ordered_dedupe
+from metricflow_semantics.errors.error_classes import InvalidQuerySyntax
 from metricflow_semantics.mf_logging.runtime import log_runtime
 from metricflow_semantics.model.semantic_manifest_lookup import SemanticManifestLookup
-from metricflow_semantics.naming.mf_query_item_description import MetricFlowQueryItemDescription
+from metricflow_semantics.naming.mf_query_item_description import QueryableItemDescription
 from metricflow_semantics.naming.object_builder_str import ObjectBuilderNameConverter
 from metricflow_semantics.query.group_by_item.candidate_push_down.push_down_visitor import DagTraversalPathTracker
 from metricflow_semantics.query.group_by_item.filter_spec_resolution.filter_location import (
@@ -332,22 +333,16 @@ class _ResolveWhereFilterSpecVisitor(GroupByItemResolutionNodeVisitor[FilterSpec
             resolution_dag=resolution_dag,
         )
         non_parsable_resolutions: List[NonParsableFilterResolution] = []
-        item_descriptions_by_location: Dict[WhereFilterLocation, List[MetricFlowQueryItemDescription]] = defaultdict(
-            list
-        )
+        item_descriptions_by_location: Dict[WhereFilterLocation, List[ObjectBuilderItemDescription]] = defaultdict(list)
         # No input metric in locations when we get here
-        text_processor = QueryItemTextProcessor()
+        filter_parser = WhereFilterParser()
         for location, where_filters in where_filters_and_locations.items():
             for where_filter in where_filters:
                 try:
-                    item_descriptions: Sequence[MetricFlowQueryItemDescription] = tuple(
-                        MetricFlowQueryItemDescription.create_from_dsi_item_description(dsi_item_description)
-                        for dsi_item_description in text_processor.collect_descriptions_from_template(
-                            jinja_template=where_filter.where_sql_template,
-                            valid_method_mapping=ConfiguredValidMethodMapping.DEFAULT_MAPPING,
-                        )
+                    item_descriptions_by_location[location].extend(
+                        filter_parser.parse_item_descriptions(where_filter.where_sql_template)
                     )
-                except ParseWhereFilterException as e:
+                except (ParseWhereFilterException, InvalidQuerySyntax) as e:
                     non_parsable_resolutions.append(
                         NonParsableFilterResolution(
                             filter_location_path=resolution_path,
@@ -370,16 +365,17 @@ class _ResolveWhereFilterSpecVisitor(GroupByItemResolutionNodeVisitor[FilterSpec
                         )
                     )
                     continue
-                item_descriptions_by_location[location].extend(item_descriptions)
 
         resolutions: List[FilterSpecResolution] = []
         for (
             filter_location,
-            item_descriptions,
+            ob_item_descriptions,
         ) in item_descriptions_by_location.items():
-            for item_description in ordered_dedupe(item_descriptions):
-                input_str = ObjectBuilderNameConverter.input_str_from_item_description(item_description)
-                spec_pattern = self._spec_pattern_factory.create_from_description(item_description)
+            for ob_item_description in ordered_dedupe(ob_item_descriptions):
+                input_str = ObjectBuilderNameConverter.input_str_from_description(ob_item_description)
+                spec_pattern = self._spec_pattern_factory.create_from_description(
+                    QueryableItemDescription.create_from_object_builder_description(ob_item_description)
+                )
                 group_by_item_resolution = group_by_item_resolver.resolve_matching_item_for_filters(
                     input_str=input_str,
                     spec_pattern=spec_pattern,
@@ -397,7 +393,9 @@ class _ResolveWhereFilterSpecVisitor(GroupByItemResolutionNodeVisitor[FilterSpec
                     FilterSpecResolution(
                         lookup_key=ResolvedSpecLookUpKey(
                             filter_location=filter_location,
-                            item_description=item_description,
+                            item_description=QueryableItemDescription.create_from_object_builder_description(
+                                ob_item_description
+                            ),
                         ),
                         filter_location_path=resolution_path,
                         resolved_linkable_element_set=group_by_item_resolution.linkable_element_set,

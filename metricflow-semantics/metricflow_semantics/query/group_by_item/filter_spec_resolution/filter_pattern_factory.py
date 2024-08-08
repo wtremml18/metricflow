@@ -10,7 +10,7 @@ from dbt_semantic_interfaces.call_parameter_sets import (
 )
 from typing_extensions import override
 
-from metricflow_semantics.naming.mf_query_item_description import MetricFlowQueryItemDescription
+from metricflow_semantics.naming.mf_query_item_description import QueryableItemDescription
 from metricflow_semantics.specs.patterns.entity_link_pattern import EntityLinkPattern, EntityLinkPatternParameterSet
 from metricflow_semantics.specs.patterns.spec_pattern import SpecPattern
 from metricflow_semantics.specs.patterns.typed_patterns import (
@@ -49,7 +49,7 @@ class WhereFilterPatternFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def create_from_description(self, description: MetricFlowQueryItemDescription) -> SpecPattern:  # noqa: D102
+    def create_from_description(self, description: QueryableItemDescription) -> SpecPattern:  # noqa: D102
         raise NotImplementedError
 
 
@@ -77,5 +77,5 @@ class DefaultWhereFilterPatternFactory(WhereFilterPatternFactory):
         return GroupByMetricPattern.from_call_parameter_set(metric_call_parameter_set)
 
     @override
-    def create_from_description(self, item_description: MetricFlowQueryItemDescription) -> SpecPattern:
+    def create_from_description(self, item_description: QueryableItemDescription) -> SpecPattern:
         return EntityLinkPattern(EntityLinkPatternParameterSet.create_from_item_description(item_description))

@@ -2,24 +2,26 @@ from __future__ import annotations
 
 import itertools
 import logging
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple, override
 
-import jinja2
 from dbt_semantic_interfaces.implementations.filters.where_filter import PydanticWhereFilterIntersection
+from dbt_semantic_interfaces.parsing.text_input.description_renderer import QueryItemDescriptionRenderer
+from dbt_semantic_interfaces.parsing.text_input.ti_description import ObjectBuilderItemDescription
+from dbt_semantic_interfaces.parsing.text_input.ti_processor import ObjectBuilderTextProcessor
+from dbt_semantic_interfaces.parsing.text_input.valid_method import ConfiguredValidMethodMapping
 from dbt_semantic_interfaces.protocols import WhereFilter, WhereFilterIntersection
 
+from metricflow_semantics.model.semantics.linkable_element import LinkableElement
+from metricflow_semantics.naming.mf_query_item_description import QueryableItemDescription
 from metricflow_semantics.query.group_by_item.filter_spec_resolution.filter_location import WhereFilterLocation
 from metricflow_semantics.query.group_by_item.filter_spec_resolution.filter_spec_lookup import (
     FilterSpecResolutionLookUp,
+    ResolvedSpecLookUpKey,
 )
 from metricflow_semantics.specs.column_assoc import ColumnAssociationResolver
+from metricflow_semantics.specs.instance_spec import LinkableInstanceSpec
 from metricflow_semantics.specs.linkable_spec_set import LinkableSpecSet
-from metricflow_semantics.specs.rendered_spec_tracker import RenderedSpecTracker
-from metricflow_semantics.specs.where_filter.where_filter_dimension import WhereFilterDimensionFactory
-from metricflow_semantics.specs.where_filter.where_filter_entity import WhereFilterEntityFactory
-from metricflow_semantics.specs.where_filter.where_filter_metric import WhereFilterMetricFactory
 from metricflow_semantics.specs.where_filter.where_filter_spec import WhereFilterSpec
-from metricflow_semantics.specs.where_filter.where_filter_time_dimension import WhereFilterTimeDimensionFactory
 from metricflow_semantics.sql.sql_bind_parameters import SqlBindParameters
 
 logger = logging.getLogger(__name__)
@@ -59,59 +61,60 @@ class WhereSpecFactory:
             return ()
 
         filter_specs: List[WhereFilterSpec] = []
+        text_processor = ObjectBuilderTextProcessor()
 
         for where_filter in filter_intersection.where_filters:
-            rendered_spec_tracker = RenderedSpecTracker()
-            dimension_factory = WhereFilterDimensionFactory(
+            renderer = _SpecQueryItemRenderer(
+                where_filter_location=filter_location,
                 column_association_resolver=self._column_association_resolver,
                 spec_resolution_lookup=self._spec_resolution_lookup,
-                where_filter_location=filter_location,
-                rendered_spec_tracker=rendered_spec_tracker,
             )
-            time_dimension_factory = WhereFilterTimeDimensionFactory(
-                column_association_resolver=self._column_association_resolver,
-                spec_resolution_lookup=self._spec_resolution_lookup,
-                where_filter_location=filter_location,
-                rendered_spec_tracker=rendered_spec_tracker,
+            rendered_where_sql = text_processor.render_template(
+                jinja_template=where_filter.where_sql_template,
+                renderer=renderer,
+                valid_method_mapping=ConfiguredValidMethodMapping.DEFAULT_MAPPING,
             )
-            entity_factory = WhereFilterEntityFactory(
-                column_association_resolver=self._column_association_resolver,
-                spec_resolution_lookup=self._spec_resolution_lookup,
-                where_filter_location=filter_location,
-                rendered_spec_tracker=rendered_spec_tracker,
-            )
-            metric_factory = WhereFilterMetricFactory(
-                column_association_resolver=self._column_association_resolver,
-                spec_resolution_lookup=self._spec_resolution_lookup,
-                where_filter_location=filter_location,
-                rendered_spec_tracker=rendered_spec_tracker,
-            )
-            try:
-                # If there was an error with the template, it should have been caught while resolving the specs for
-                # the filters during query resolution.
-                where_sql = jinja2.Template(where_filter.where_sql_template, undefined=jinja2.StrictUndefined).render(
-                    {
-                        "Dimension": dimension_factory.create,
-                        "TimeDimension": time_dimension_factory.create,
-                        "Entity": entity_factory.create,
-                        "Metric": metric_factory.create,
-                    }
-                )
-            except (jinja2.exceptions.UndefinedError, jinja2.exceptions.TemplateSyntaxError) as e:
-                raise RenderSqlTemplateException(
-                    f"Error while rendering Jinja template:\n{where_filter.where_sql_template}"
-                ) from e
-            rendered_specs = tuple(result[0] for result in rendered_spec_tracker.rendered_specs_to_elements)
+            rendered_specs = tuple(result[0] for result in renderer.rendered_specs_to_elements)
             linkable_elements = tuple(
-                itertools.chain.from_iterable(result[1] for result in rendered_spec_tracker.rendered_specs_to_elements)
+                itertools.chain.from_iterable(result[1] for result in renderer.rendered_specs_to_elements)
             )
             filter_specs.append(
                 WhereFilterSpec(
-                    where_sql=where_sql,
+                    where_sql=rendered_where_sql,
                     bind_parameters=SqlBindParameters(),
                     linkable_spec_set=LinkableSpecSet.create_from_specs(rendered_specs),
                     linkable_element_unions=tuple(linkable_element.as_union for linkable_element in linkable_elements),
                 )
             )
-
         return filter_specs
+
+
+class _SpecQueryItemRenderer(QueryItemDescriptionRenderer):
+    def __init__(
+        self,
+        where_filter_location: WhereFilterLocation,
+        column_association_resolver: ColumnAssociationResolver,
+        spec_resolution_lookup: FilterSpecResolutionLookUp,
+    ) -> None:
+        self._where_filter_location = where_filter_location
+        self._column_association_resolver = column_association_resolver
+        self._spec_resolution_lookup = spec_resolution_lookup
+        self._rendered_specs_to_elements: List[Tuple[LinkableInstanceSpec, Sequence[LinkableElement]]] = []
+
+    @property
+    def rendered_specs_to_elements(self) -> Sequence[Tuple[LinkableInstanceSpec, Sequence[LinkableElement]]]:
+        """Returns specs that were recorded by record_rendered_spec()."""
+        return self._rendered_specs_to_elements
+
+    @override
+    def render_description(self, item_description: ObjectBuilderItemDescription) -> str:
+        key = ResolvedSpecLookUpKey(
+            filter_location=self._where_filter_location,
+            item_description=QueryableItemDescription.create_from_object_builder_description(item_description),
+        )
+        resolved_spec = self._spec_resolution_lookup.checked_resolved_spec(key)
+        resolved_elements = self._spec_resolution_lookup.checked_resolved_linkable_elements(key)
+        self._rendered_specs_to_elements.append((resolved_spec, resolved_elements))
+        column_association = self._column_association_resolver.resolve_spec(resolved_spec)
+
+        return column_association.column_name

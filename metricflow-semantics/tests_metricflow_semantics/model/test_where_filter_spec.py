@@ -3,24 +3,17 @@ from __future__ import annotations
 import logging
 
 import pytest
-from dbt_semantic_interfaces.call_parameter_sets import (
-    DimensionCallParameterSet,
-    EntityCallParameterSet,
-    MetricCallParameterSet,
-    TimeDimensionCallParameterSet,
-)
 from dbt_semantic_interfaces.implementations.filters.where_filter import (
     PydanticWhereFilter,
     PydanticWhereFilterIntersection,
 )
 from dbt_semantic_interfaces.naming.keywords import METRIC_TIME_ELEMENT_NAME
+from dbt_semantic_interfaces.parsing.text_input.ti_description import ObjectBuilderItemDescription, QueryItemType
 from dbt_semantic_interfaces.protocols import WhereFilterIntersection
 from dbt_semantic_interfaces.references import (
-    DimensionReference,
     EntityReference,
     MetricReference,
     SemanticModelReference,
-    TimeDimensionReference,
 )
 from dbt_semantic_interfaces.type_enums import DimensionType
 from dbt_semantic_interfaces.type_enums.date_part import DatePart
@@ -37,10 +30,10 @@ from metricflow_semantics.model.semantics.linkable_element import (
     SemanticModelToMetricSubqueryJoinPath,
 )
 from metricflow_semantics.model.semantics.linkable_element_set import LinkableElementSet
+from metricflow_semantics.naming.mf_query_item_description import QueryableItemDescription
 from metricflow_semantics.naming.object_builder_scheme import ObjectBuilderNamingScheme
 from metricflow_semantics.query.group_by_item.filter_spec_resolution.filter_location import WhereFilterLocation
 from metricflow_semantics.query.group_by_item.filter_spec_resolution.filter_spec_lookup import (
-    CallParameterSet,
     FilterSpecResolution,
     FilterSpecResolutionLookUp,
     ResolvedSpecLookUpKey,
@@ -63,7 +56,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_spec_lookup(
-    call_parameter_set: CallParameterSet,
+    item_description: ObjectBuilderItemDescription,
     resolved_spec: LinkableInstanceSpec,
     resolved_linkable_element_set: LinkableElementSet,
 ) -> FilterSpecResolutionLookUp:
@@ -73,7 +66,7 @@ def create_spec_lookup(
             FilterSpecResolution(
                 lookup_key=ResolvedSpecLookUpKey(
                     filter_location=EXAMPLE_FILTER_LOCATION,
-                    call_parameter_set=call_parameter_set,
+                    item_description=QueryableItemDescription.create_from_object_builder_description(item_description),
                 ),
                 filter_location_path=MetricFlowQueryResolutionPath.empty_instance(),
                 where_filter_intersection=create_where_filter_intersection("Dimension('dummy__dimension')"),
@@ -98,9 +91,14 @@ def test_dimension_in_filter(  # noqa: D103
     where_filter_specs = WhereSpecFactory(
         column_association_resolver=column_association_resolver,
         spec_resolution_lookup=create_spec_lookup(
-            call_parameter_set=DimensionCallParameterSet(
-                entity_path=(EntityReference("listing"),),
-                dimension_reference=DimensionReference("country_latest"),
+            item_description=ObjectBuilderItemDescription(
+                item_type=QueryItemType.DIMENSION,
+                item_name="country_latest",
+                entity_path=("listing",),
+                group_by_for_metric_item=(),
+                time_granularity_name=None,
+                date_part_name=None,
+                descending=None,
             ),
             resolved_spec=DimensionSpec(element_name="country_latest", entity_links=(EntityReference("listing"),)),
             resolved_linkable_element_set=LinkableElementSet(
@@ -151,10 +149,14 @@ def test_dimension_in_filter_with_grain(  # noqa: D103
     where_filter_specs = WhereSpecFactory(
         column_association_resolver=column_association_resolver,
         spec_resolution_lookup=create_spec_lookup(
-            call_parameter_set=TimeDimensionCallParameterSet(
-                entity_path=(EntityReference("listing"),),
-                time_dimension_reference=TimeDimensionReference("created_at"),
-                time_granularity=TimeGranularity.WEEK,
+            item_description=ObjectBuilderItemDescription(
+                item_type=QueryItemType.TIME_DIMENSION,
+                item_name="created_at",
+                entity_path=("listing",),
+                group_by_for_metric_item=(),
+                time_granularity_name=TimeGranularity.WEEK.value,
+                date_part_name=None,
+                descending=None,
             ),
             resolved_spec=TimeDimensionSpec(
                 element_name="created_at",
@@ -215,10 +217,14 @@ def test_time_dimension_in_filter(  # noqa: D103
     where_filter_specs = WhereSpecFactory(
         column_association_resolver=column_association_resolver,
         spec_resolution_lookup=create_spec_lookup(
-            call_parameter_set=TimeDimensionCallParameterSet(
-                entity_path=(EntityReference("listing"),),
-                time_dimension_reference=TimeDimensionReference("created_at"),
-                time_granularity=TimeGranularity.MONTH,
+            item_description=ObjectBuilderItemDescription(
+                item_type=QueryItemType.TIME_DIMENSION,
+                item_name="created_at",
+                entity_path=("listing",),
+                group_by_for_metric_item=(),
+                time_granularity_name=TimeGranularity.MONTH.value,
+                date_part_name=None,
+                descending=None,
             ),
             resolved_spec=TimeDimensionSpec(
                 element_name="created_at",
@@ -279,10 +285,14 @@ def test_time_dimension_with_grain_in_name(  # noqa: D103
     where_filter_specs = WhereSpecFactory(
         column_association_resolver=column_association_resolver,
         spec_resolution_lookup=create_spec_lookup(
-            call_parameter_set=TimeDimensionCallParameterSet(
-                entity_path=(EntityReference("listing"),),
-                time_dimension_reference=TimeDimensionReference("created_at"),
-                time_granularity=TimeGranularity.MONTH,
+            item_description=ObjectBuilderItemDescription(
+                item_type=QueryItemType.TIME_DIMENSION,
+                item_name="created_at",
+                entity_path=("listing",),
+                group_by_for_metric_item=(),
+                time_granularity_name=TimeGranularity.MONTH.value,
+                date_part_name=None,
+                descending=None,
             ),
             resolved_spec=TimeDimensionSpec(
                 element_name="created_at",
@@ -343,10 +353,14 @@ def test_date_part_in_filter(  # noqa: D103
     where_filter_specs = WhereSpecFactory(
         column_association_resolver=column_association_resolver,
         spec_resolution_lookup=create_spec_lookup(
-            call_parameter_set=TimeDimensionCallParameterSet(
+            item_description=ObjectBuilderItemDescription(
+                item_type=QueryItemType.TIME_DIMENSION,
+                item_name="metric_time",
                 entity_path=(),
-                time_dimension_reference=TimeDimensionReference("metric_time"),
-                date_part=DatePart.YEAR,
+                group_by_for_metric_item=(),
+                time_granularity_name=None,
+                date_part_name=DatePart.YEAR.name,
+                descending=None,
             ),
             resolved_spec=TimeDimensionSpec(
                 element_name="metric_time",
@@ -409,13 +423,18 @@ def resolved_spec_lookup() -> FilterSpecResolutionLookUp:
     return FilterSpecResolutionLookUp(
         spec_resolutions=(
             FilterSpecResolution(
-                lookup_key=ResolvedSpecLookUpKey.from_parameters(
+                lookup_key=ResolvedSpecLookUpKey(
                     filter_location=EXAMPLE_FILTER_LOCATION,
-                    call_parameter_set=TimeDimensionCallParameterSet(
-                        time_dimension_reference=TimeDimensionReference(element_name=METRIC_TIME_ELEMENT_NAME),
-                        entity_path=(),
-                        time_granularity=TimeGranularity.WEEK,
-                        date_part=DatePart.YEAR,
+                    item_description=QueryableItemDescription.create_from_object_builder_description(
+                        ObjectBuilderItemDescription(
+                            item_type=QueryItemType.TIME_DIMENSION,
+                            item_name=METRIC_TIME_ELEMENT_NAME,
+                            entity_path=(),
+                            group_by_for_metric_item=(),
+                            time_granularity_name=TimeGranularity.WEEK.value,
+                            date_part_name=DatePart.YEAR.value,
+                            descending=None,
+                        )
                     ),
                 ),
                 filter_location_path=MetricFlowQueryResolutionPath.empty_instance(),
@@ -539,9 +558,14 @@ def test_entity_in_filter(  # noqa: D103
     where_filter_spec = WhereSpecFactory(
         column_association_resolver=column_association_resolver,
         spec_resolution_lookup=create_spec_lookup(
-            call_parameter_set=EntityCallParameterSet(
-                entity_path=(EntityReference("listing"),),
-                entity_reference=EntityReference("user"),
+            item_description=ObjectBuilderItemDescription(
+                item_type=QueryItemType.ENTITY,
+                item_name="user",
+                entity_path=("listing",),
+                group_by_for_metric_item=(),
+                time_granularity_name=None,
+                date_part_name=None,
+                descending=None,
             ),
             resolved_spec=EntitySpec(element_name="user", entity_links=(EntityReference("listing"),)),
             resolved_linkable_element_set=LinkableElementSet(
@@ -591,9 +615,14 @@ def test_metric_in_filter(  # noqa: D103
     where_filter_spec = WhereSpecFactory(
         column_association_resolver=column_association_resolver,
         spec_resolution_lookup=create_spec_lookup(
-            call_parameter_set=MetricCallParameterSet(
-                group_by=(EntityReference("listing"),),
-                metric_reference=MetricReference("bookings"),
+            item_description=ObjectBuilderItemDescription(
+                item_type=QueryItemType.METRIC,
+                item_name="bookings",
+                entity_path=(),
+                group_by_for_metric_item=("listing",),
+                time_granularity_name=None,
+                date_part_name=None,
+                descending=None,
             ),
             resolved_spec=group_by_metric_spec,
             resolved_linkable_element_set=LinkableElementSet(
@@ -646,11 +675,16 @@ def test_dimension_time_dimension_parity(column_association_resolver: ColumnAsso
                     FilterSpecResolution(
                         lookup_key=ResolvedSpecLookUpKey(
                             filter_location=filter_location,
-                            call_parameter_set=TimeDimensionCallParameterSet(
-                                entity_path=(),
-                                time_dimension_reference=TimeDimensionReference(METRIC_TIME_ELEMENT_NAME),
-                                time_granularity=TimeGranularity.WEEK,
-                                date_part=DatePart.YEAR,
+                            item_description=QueryableItemDescription.create_from_object_builder_description(
+                                ObjectBuilderItemDescription(
+                                    item_type=QueryItemType.TIME_DIMENSION,
+                                    item_name=METRIC_TIME_ELEMENT_NAME,
+                                    entity_path=(),
+                                    group_by_for_metric_item=(),
+                                    time_granularity_name=TimeGranularity.WEEK.value,
+                                    date_part_name=TimeGranularity.YEAR.value,
+                                    descending=None,
+                                )
                             ),
                         ),
                         filter_location_path=MetricFlowQueryResolutionPath(()),

@@ -331,7 +331,7 @@ def test_parse_and_validate_where_constraint_dims(
             where_constraint_str="{{ Dimension('booking__invalid_dim') }} = '1'",
         )
 
-    with pytest.raises(InvalidQueryException, match="Error parsing where filter"):
+    with pytest.raises(InvalidQueryException, match="does not match"):
         bookings_query_parser.parse_and_validate_query(
             metric_names=["bookings"],
             group_by_names=[MTD],
