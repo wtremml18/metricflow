@@ -52,6 +52,7 @@ FilterSpecResolutionLookUp(
       spec_pattern=TimeDimensionPattern(
         parameter_set=EntityLinkPatternParameterSet(
           fields_to_compare=(DATE_PART, ELEMENT_NAME, ENTITY_LINKS),
+          element_types=(DIMENSION, ENTITY, METRIC, TIME_DIMENSION),
           element_name='metric_time',
         ),
       ),
@@ -116,6 +117,7 @@ FilterSpecResolutionLookUp(
       spec_pattern=TimeDimensionPattern(
         parameter_set=EntityLinkPatternParameterSet(
           fields_to_compare=(DATE_PART, ELEMENT_NAME, ENTITY_LINKS),
+          element_types=(DIMENSION, ENTITY, METRIC, TIME_DIMENSION),
           element_name='metric_time',
         ),
       ),

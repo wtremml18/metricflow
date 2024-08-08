@@ -83,6 +83,12 @@ ParseQueryResult(
                 ELEMENT_NAME,
                 ENTITY_LINKS,
               ),
+              element_types=(
+                DIMENSION,
+                ENTITY,
+                METRIC,
+                TIME_DIMENSION,
+              ),
               element_name='is_instant',
               entity_links=(
                 EntityReference(
