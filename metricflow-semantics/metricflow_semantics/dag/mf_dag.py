@@ -57,7 +57,7 @@ class DagNodeVisitor(Generic[VisitorOutputT], ABC):
 DagNodeT = TypeVar("DagNodeT", bound="DagNode")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class DagNode(MetricFlowPrettyFormattable, Generic[DagNodeT], ABC):
     """A node in a DAG. These should be immutable."""
 
