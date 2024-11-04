@@ -106,12 +106,12 @@ class SqlRewritingSubQueryReducerVisitor(SqlQueryPlanNodeVisitor[SqlQueryPlanNod
             ),
             join_descs=tuple(
                 SqlJoinDescription(
-                    right_source=x.right_source.accept(self),
-                    right_source_alias=x.right_source_alias,
-                    on_condition=x.on_condition,
-                    join_type=x.join_type,
+                    right_source=join_desc.right_source.accept(self),
+                    right_source_alias=join_desc.right_source_alias,
+                    on_condition=join_desc.on_condition,
+                    join_type=join_desc.join_type,
                 )
-                for x in node.join_descs
+                for join_desc in node.join_descs
             ),
             group_bys=node.group_bys,
             order_bys=node.order_bys,
@@ -199,7 +199,7 @@ class SqlRewritingSubQueryReducerVisitor(SqlQueryPlanNodeVisitor[SqlQueryPlanNod
             if select_column.expr.lineage.contains_aggregate_exprs:
                 return False
         return (
-            len(node.parent_nodes) <= 1
+            len(node.join_descs) == 0
             and len(node.group_bys) == 0
             and len(node.order_bys) == 0
             and not node.limit
@@ -419,8 +419,7 @@ class SqlRewritingSubQueryReducerVisitor(SqlQueryPlanNodeVisitor[SqlQueryPlanNod
                 return select_column
         return None
 
-    @staticmethod
-    def _rewrite_node_with_join(node: SqlSelectStatementNode) -> SqlSelectStatementNode:
+    def _rewrite_node_with_join(self, node: SqlSelectStatementNode) -> SqlSelectStatementNode:
         """Reduces nodes with joins if the join source is simple to reduce.
 
         Converts this:
@@ -579,6 +578,13 @@ class SqlRewritingSubQueryReducerVisitor(SqlQueryPlanNodeVisitor[SqlQueryPlanNod
             select_columns=tuple(clauses_to_rewrite.select_columns),
             from_source=from_source,
             from_source_alias=from_source_alias,
+            cte_sources=tuple(
+                SqlCteNode.create(
+                    cte_alias=cte_source.cte_alias,
+                    select_statement=cte_source.select_statement.accept(self),
+                )
+                for cte_source in node.cte_sources
+            ),
             join_descs=tuple(new_join_descs),
             group_bys=tuple(clauses_to_rewrite.group_bys),
             order_bys=tuple(clauses_to_rewrite.order_bys),
@@ -595,7 +601,7 @@ class SqlRewritingSubQueryReducerVisitor(SqlQueryPlanNodeVisitor[SqlQueryPlanNod
         node_with_reduced_parents = self._reduce_parents(node)
 
         if len(node_with_reduced_parents.join_descs) > 0:
-            return SqlRewritingSubQueryReducerVisitor._rewrite_node_with_join(node_with_reduced_parents)
+            return self._rewrite_node_with_join(node_with_reduced_parents)
 
         if not self._current_node_can_be_reduced(node_with_reduced_parents):
             return node_with_reduced_parents
@@ -699,6 +705,9 @@ class SqlRewritingSubQueryReducerVisitor(SqlQueryPlanNodeVisitor[SqlQueryPlanNod
             ),
             from_source=from_source_select_node.from_source,
             from_source_alias=from_source_select_node.from_source_alias,
+            cte_sources=tuple(
+                cte_source.with_new_select(cte_source.select_statement.accept(self)) for cte_source in node.cte_sources
+            ),
             join_descs=from_source_select_node.join_descs,
             group_bys=new_group_bys,
             order_bys=tuple(new_order_bys),
@@ -733,13 +742,13 @@ class SqlGroupByRewritingVisitor(SqlQueryPlanNodeVisitor[SqlQueryPlanNode]):
     ) -> Optional[SqlSelectColumn]:
         """Given an expression, find the SELECT column that has the same expression."""
         for select_column in select_columns:
-            if select_column.expr == expr:
+            if select_column.expr.matches(expr):
                 return select_column
         return None
 
     @override
     def visit_cte_node(self, node: SqlCteNode) -> SqlQueryPlanNode:
-        raise NotImplementedError
+        return node.with_new_select(node.select_statement.accept(self))
 
     def visit_select_statement_node(self, node: SqlSelectStatementNode) -> SqlQueryPlanNode:  # noqa: D102
         new_group_bys = []
@@ -767,6 +776,9 @@ class SqlGroupByRewritingVisitor(SqlQueryPlanNodeVisitor[SqlQueryPlanNode]):
             select_columns=node.select_columns,
             from_source=node.from_source.accept(self),
             from_source_alias=node.from_source_alias,
+            cte_sources=tuple(
+                cte_source.with_new_select(cte_source.select_statement.accept(self)) for cte_source in node.cte_sources
+            ),
             join_descs=tuple(
                 SqlJoinDescription(
                     right_source=x.right_source.accept(self),

@@ -148,10 +148,8 @@ class SqlTagRequiredColumnAliasesVisitor(SqlQueryPlanNodeVisitor[None]):
         # TODO: don't prune columns used in join condition! Tricky to derive since the join condition can be any
         # SqlExpressionNode.
 
-        if len(required_select_columns_in_this_node) == 0:
-            raise RuntimeError(
-                "No columns are required in this node - this indicates a bug in this collector or in the inputs."
-            )
+        # It's possible for `required_select_columns_in_this_node` to be empty because we traverse through the ancestors
+        # of a CTE node whenever a CTE node is updated. See `test_multi_child_pruning`.
 
         # Based on the expressions in this select statement, figure out what column aliases are needed in the sources of
         # this query (i.e. tables or sub-queries in the FROM or JOIN clauses).
