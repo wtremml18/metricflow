@@ -55,6 +55,7 @@ class SqlTagRequiredColumnAliasesVisitor(SqlQueryPlanNodeVisitor[None]):
             traverses the SQL-query representation DAG.
         """
         self._column_alias_tagger = tagged_column_alias_set
+        self._cte_alias_to_cte_node: Dict[str, SqlCteNode] = {}
 
     def _search_for_expressions(
         self, select_node: SqlSelectStatementNode, pruned_select_columns: Tuple[SqlSelectColumn, ...]
@@ -86,7 +87,13 @@ class SqlTagRequiredColumnAliasesVisitor(SqlQueryPlanNodeVisitor[None]):
 
     @override
     def visit_cte_node(self, node: SqlCteNode) -> None:
-        raise NotImplementedError
+        select_statement = node.select_statement
+        # Copy the tagged aliases from the CTE to the SELECT since when visiting a SELECT, the CTE node (not the SELECT
+        # in the CTE) was tagged with the required aliases.
+        required_column_aliases_in_this_node = self._column_alias_tagger.get_tagged_aliases(node)
+        self._column_alias_tagger.tag_aliases(select_statement, required_column_aliases_in_this_node)
+        # Visit parent nodes.
+        select_statement.accept(self)
 
     def _visit_parents(self, node: SqlQueryPlanNode) -> None:
         """Default recursive handler to visit the parents of the given node."""
@@ -94,9 +101,18 @@ class SqlTagRequiredColumnAliasesVisitor(SqlQueryPlanNodeVisitor[None]):
             parent_node.accept(self)
         return
 
+    def _tag_potential_cte_node(self, table_name: str, column_aliases: Set[str]) -> None:
+        """A reference to a SQL table might be a CTE. If so, tag the appropriate aliases in the CTEs."""
+        cte_node = self._cte_alias_to_cte_node.get(table_name)
+        if cte_node is not None:
+            self._column_alias_tagger.tag_aliases(cte_node, column_aliases)
+            # Propagate the required aliases to parents, which could be other CTEs.
+            cte_node.accept(self)
+
     def visit_select_statement_node(self, node: SqlSelectStatementNode) -> None:  # noqa: D102
         # Based on column aliases that are tagged in this SELECT statement, tag corresponding column aliases in
         # parent nodes.
+        self._cte_alias_to_cte_node.update({cte_source.cte_alias: cte_source for cte_source in node.cte_sources})
 
         initial_required_column_aliases_in_this_node = self._column_alias_tagger.get_tagged_aliases(node)
 
@@ -155,17 +171,35 @@ class SqlTagRequiredColumnAliasesVisitor(SqlQueryPlanNodeVisitor[None]):
             column_reference = column_reference_expr.col_ref
             source_alias_to_required_column_alias[column_reference.table_alias].add(column_reference.column_name)
 
+        logger.debug(
+            LazyFormat(
+                "Collected required column names from sources",
+                source_alias_to_required_column_alias=source_alias_to_required_column_alias,
+            )
+        )
         # Appropriately tag the columns required in the parent nodes.
         if node.from_source_alias in source_alias_to_required_column_alias:
             aliases_required_in_parent = source_alias_to_required_column_alias[node.from_source_alias]
             self._column_alias_tagger.tag_aliases(node=node.from_source, column_aliases=aliases_required_in_parent)
+            from_source_as_sql_table_node = node.from_source.as_sql_table_node
+            if from_source_as_sql_table_node is not None:
+                self._tag_potential_cte_node(
+                    table_name=from_source_as_sql_table_node.sql_table.table_name,
+                    column_aliases=aliases_required_in_parent,
+                )
+
         for join_desc in node.join_descs:
             if join_desc.right_source_alias in source_alias_to_required_column_alias:
                 aliases_required_in_parent = source_alias_to_required_column_alias[join_desc.right_source_alias]
                 self._column_alias_tagger.tag_aliases(
                     node=join_desc.right_source, column_aliases=aliases_required_in_parent
                 )
-        # TODO: Handle CTEs parent nodes.
+                right_source_as_sql_table_node = join_desc.right_source.as_sql_table_node
+                if right_source_as_sql_table_node is not None:
+                    self._tag_potential_cte_node(
+                        table_name=right_source_as_sql_table_node.sql_table.table_name,
+                        column_aliases=aliases_required_in_parent,
+                    )
 
         # For all string columns, assume that they are needed from all sources since we don't have a table alias
         # in SqlStringExpression.used_columns
