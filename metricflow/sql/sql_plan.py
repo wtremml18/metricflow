@@ -41,14 +41,14 @@ class SqlQueryPlanNode(DagNode["SqlQueryPlanNode"], ABC):
 
     @property
     @abstractmethod
-    def is_table(self) -> bool:
-        """Returns whether this node resolves to a table (vs. a query)."""
+    def as_select_node(self) -> Optional[SqlSelectStatementNode]:
+        """If possible, return this as a select statement node."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def as_select_node(self) -> Optional[SqlSelectStatementNode]:
-        """If possible, return this as a select statement node."""
+    def as_sql_table_node(self) -> Optional[SqlTableNode]:
+        """If possible, return this as SQL table node."""
         raise NotImplementedError
 
 
@@ -193,12 +193,13 @@ class SqlSelectStatementNode(SqlQueryPlanNode):
         return visitor.visit_select_statement_node(self)
 
     @property
-    def is_table(self) -> bool:  # noqa: D102
-        return False
-
-    @property
     def as_select_node(self) -> Optional[SqlSelectStatementNode]:  # noqa: D102
         return self
+
+    @property
+    @override
+    def as_sql_table_node(self) -> Optional[SqlTableNode]:
+        return None
 
     @property
     @override
@@ -235,12 +236,13 @@ class SqlTableNode(SqlQueryPlanNode):
         return visitor.visit_table_node(self)
 
     @property
-    def is_table(self) -> bool:  # noqa: D102
-        return True
-
-    @property
     def as_select_node(self) -> Optional[SqlSelectStatementNode]:  # noqa: D102
         return None
+
+    @property
+    @override
+    def as_sql_table_node(self) -> Optional[SqlTableNode]:
+        return self
 
 
 @dataclass(frozen=True, eq=False)
@@ -272,11 +274,12 @@ class SqlSelectQueryFromClauseNode(SqlQueryPlanNode):
         return visitor.visit_query_from_clause_node(self)
 
     @property
-    def is_table(self) -> bool:  # noqa: D102
-        return False
-
-    @property
     def as_select_node(self) -> Optional[SqlSelectStatementNode]:  # noqa: D102
+        return None
+
+    @override
+    @property
+    def as_sql_table_node(self) -> Optional[SqlTableNode]:
         return None
 
 
@@ -286,7 +289,6 @@ class SqlCreateTableAsNode(SqlQueryPlanNode):
 
     Attributes:
         sql_table: The SQL table to create.
-        parent_node: The parent query plan node.
     """
 
     sql_table: SqlTable
@@ -308,12 +310,12 @@ class SqlCreateTableAsNode(SqlQueryPlanNode):
 
     @property
     @override
-    def is_table(self) -> bool:
-        return False
+    def as_select_node(self) -> Optional[SqlSelectStatementNode]:
+        return None
 
     @property
     @override
-    def as_select_node(self) -> Optional[SqlSelectStatementNode]:
+    def as_sql_table_node(self) -> Optional[SqlTableNode]:
         return None
 
     @property
@@ -356,11 +358,11 @@ class SqlQueryPlan(MetricFlowDag[SqlQueryPlanNode]):
 class SqlCteNode(SqlQueryPlanNode):
     """Represents a single common table expression."""
 
-    select_statement: SqlSelectStatementNode
+    select_statement: SqlQueryPlanNode
     cte_alias: str
 
     @staticmethod
-    def create(select_statement: SqlSelectStatementNode, cte_alias: str) -> SqlCteNode:  # noqa: D102
+    def create(select_statement: SqlQueryPlanNode, cte_alias: str) -> SqlCteNode:  # noqa: D102
         return SqlCteNode(
             parent_nodes=(select_statement,),
             select_statement=select_statement,
@@ -373,12 +375,12 @@ class SqlCteNode(SqlQueryPlanNode):
 
     @property
     @override
-    def is_table(self) -> bool:
-        return False
+    def as_select_node(self) -> Optional[SqlSelectStatementNode]:
+        return None
 
     @property
     @override
-    def as_select_node(self) -> Optional[SqlSelectStatementNode]:
+    def as_sql_table_node(self) -> Optional[SqlTableNode]:
         return None
 
     @property
