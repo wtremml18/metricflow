@@ -101,7 +101,7 @@ class DataflowNodeToSqlCteVisitor(DataflowNodeToSqlSubqueryVisitor):
         node_id = node.node_id
         cte_data_set = SqlDataSet(
             instance_set=subquery_sql_dataset.instance_set,
-            sql_node=SqlSelectStatementNode.create(
+            sql_select_node=SqlSelectStatementNode.create(
                 description=f"Read From CTE For {node_id=}",
                 select_columns=CreateSelectColumnsForInstances(
                     table_alias=cte_alias,

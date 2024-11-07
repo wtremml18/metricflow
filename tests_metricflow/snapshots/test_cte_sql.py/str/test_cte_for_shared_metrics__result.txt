@@ -1,0 +1,128 @@
+initial_sql:
+  -- Combine Aggregated Outputs
+  SELECT
+    COALESCE(subq_4.metric_time__day, subq_15.metric_time__day) AS metric_time__day
+    , MAX(subq_4.bookings) AS bookings
+    , MAX(CAST(subq_15.bookings AS DOUBLE) / CAST(NULLIF(subq_15.bookers, 0) AS DOUBLE)) AS bookings_per_booker
+  FROM (
+    -- Aggregate Measures
+    -- Compute Metrics via Expressions
+    SELECT
+      metric_time__day
+      , SUM(bookings) AS bookings
+    FROM (
+      -- Read Elements From Semantic Model 'bookings_source'
+      -- Metric Time Dimension 'ds'
+      -- Pass Only Elements: ['bookings', 'metric_time__day']
+      SELECT
+        DATE_TRUNC('day', ds) AS metric_time__day
+        , 1 AS bookings
+      FROM mf_test_2024_11_07_29mfomsb.fct_bookings bookings_source_src_28000
+    ) subq_2
+    GROUP BY
+      metric_time__day
+  ) subq_4
+  FULL OUTER JOIN (
+    -- Combine Aggregated Outputs
+    SELECT
+      COALESCE(subq_9.metric_time__day, subq_14.metric_time__day) AS metric_time__day
+      , MAX(subq_9.bookings) AS bookings
+      , MAX(subq_14.bookers) AS bookers
+    FROM (
+      -- Aggregate Measures
+      -- Compute Metrics via Expressions
+      SELECT
+        metric_time__day
+        , SUM(bookings) AS bookings
+      FROM (
+        -- Read Elements From Semantic Model 'bookings_source'
+        -- Metric Time Dimension 'ds'
+        -- Pass Only Elements: ['bookings', 'metric_time__day']
+        SELECT
+          DATE_TRUNC('day', ds) AS metric_time__day
+          , 1 AS bookings
+        FROM mf_test_2024_11_07_29mfomsb.fct_bookings bookings_source_src_28000
+      ) subq_7
+      GROUP BY
+        metric_time__day
+    ) subq_9
+    FULL OUTER JOIN (
+      -- Read Elements From Semantic Model 'bookings_source'
+      -- Metric Time Dimension 'ds'
+      -- Pass Only Elements: ['bookers', 'metric_time__day']
+      -- Aggregate Measures
+      -- Compute Metrics via Expressions
+      SELECT
+        DATE_TRUNC('day', ds) AS metric_time__day
+        , COUNT(DISTINCT guest_id) AS bookers
+      FROM mf_test_2024_11_07_29mfomsb.fct_bookings bookings_source_src_28000
+      GROUP BY
+        DATE_TRUNC('day', ds)
+    ) subq_14
+    ON
+      subq_9.metric_time__day = subq_14.metric_time__day
+    GROUP BY
+      COALESCE(subq_9.metric_time__day, subq_14.metric_time__day)
+  ) subq_15
+  ON
+    subq_4.metric_time__day = subq_15.metric_time__day
+  GROUP BY
+    COALESCE(subq_4.metric_time__day, subq_15.metric_time__day)
+sql_with_cte:
+  -- Combine Aggregated Outputs
+  WITH cte_0 AS (
+    -- Read Elements From Semantic Model 'bookings_source'
+    -- Metric Time Dimension 'ds'
+    SELECT
+      DATE_TRUNC('day', ds) AS metric_time__day
+      , 1 AS bookings
+      , guest_id AS bookers
+    FROM mf_test_2024_11_07_29mfomsb.fct_bookings bookings_source_src_28000
+  )
+
+  , cte_2 AS (
+    -- Read From CTE For node_id=sma_28009
+    -- Pass Only Elements: ['bookings', 'metric_time__day']
+    -- Aggregate Measures
+    -- Compute Metrics via Expressions
+    SELECT
+      metric_time__day
+      , SUM(bookings) AS bookings
+    FROM cte_0 cte_0
+    GROUP BY
+      metric_time__day
+  )
+
+  SELECT
+    COALESCE(cte_2.metric_time__day, subq_27.metric_time__day) AS metric_time__day
+    , MAX(cte_2.bookings) AS bookings
+    , MAX(CAST(subq_27.bookings AS DOUBLE) / CAST(NULLIF(subq_27.bookers, 0) AS DOUBLE)) AS bookings_per_booker
+  FROM cte_2 cte_2
+  FULL OUTER JOIN (
+    -- Combine Aggregated Outputs
+    SELECT
+      COALESCE(cte_2.metric_time__day, subq_26.metric_time__day) AS metric_time__day
+      , MAX(cte_2.bookings) AS bookings
+      , MAX(subq_26.bookers) AS bookers
+    FROM cte_2 cte_2
+    FULL OUTER JOIN (
+      -- Read From CTE For node_id=sma_28009
+      -- Pass Only Elements: ['bookers', 'metric_time__day']
+      -- Aggregate Measures
+      -- Compute Metrics via Expressions
+      SELECT
+        metric_time__day
+        , COUNT(DISTINCT bookers) AS bookers
+      FROM cte_0 cte_0
+      GROUP BY
+        metric_time__day
+    ) subq_26
+    ON
+      cte_2.metric_time__day = subq_26.metric_time__day
+    GROUP BY
+      COALESCE(cte_2.metric_time__day, subq_26.metric_time__day)
+  ) subq_27
+  ON
+    cte_2.metric_time__day = subq_27.metric_time__day
+  GROUP BY
+    COALESCE(cte_2.metric_time__day, subq_27.metric_time__day)

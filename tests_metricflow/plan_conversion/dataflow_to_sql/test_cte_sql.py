@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import FrozenSet, Mapping
 
 from _pytest.fixtures import FixtureRequest
-
-from metricflow.dataflow.builder.dataflow_plan_builder import DataflowPlanBuilder
-from metricflow.sql.render.common_dataflow_branches import find_common_branches
 from metricflow_semantics.dag.mf_dag import DagId
 from metricflow_semantics.mf_logging.lazy_formattable import LazyFormat
 from metricflow_semantics.query.query_parser import MetricFlowQueryParser
@@ -15,6 +12,7 @@ from metricflow_semantics.specs.spec_set import InstanceSpecSet
 from metricflow_semantics.test_helpers.config_helpers import MetricFlowTestConfiguration
 from metricflow_semantics.test_helpers.snapshot_helpers import assert_str_snapshot_equal
 
+from metricflow.dataflow.builder.dataflow_plan_builder import DataflowPlanBuilder
 from metricflow.dataflow.dataflow_plan import (
     DataflowPlanNode,
 )
@@ -22,6 +20,7 @@ from metricflow.dataflow.nodes.filter_elements import FilterElementsNode
 from metricflow.plan_conversion.dataflow_to_sql import DataflowToSqlQueryPlanConverter
 from metricflow.protocols.sql_client import SqlEngine
 from metricflow.sql.optimizer.optimization_levels import SqlQueryOptimizationLevel
+from metricflow.sql.render.common_dataflow_branches import find_common_branches
 from metricflow.sql.render.sql_plan_renderer import DefaultSqlQueryPlanRenderer
 from tests_metricflow.fixtures.manifest_fixtures import MetricFlowEngineTestFixture, SemanticManifestSetup
 
@@ -42,7 +41,7 @@ def convert_and_check(
         sql_query_plan_id=DagId.from_str("plan_0"),
         dataflow_plan_node=node,
         optimization_level=SqlQueryOptimizationLevel.O4,
-        nodes_to_convert_to_cte=frozenset(),
+        override_nodes_to_convert_to_cte=frozenset(),
     )
     sql_plan_without_cte = conversion_result.sql_plan
     renderer = DefaultSqlQueryPlanRenderer()
@@ -53,7 +52,7 @@ def convert_and_check(
         sql_query_plan_id=DagId.from_str("plan0_optimized"),
         dataflow_plan_node=node,
         optimization_level=SqlQueryOptimizationLevel.O4,
-        nodes_to_convert_to_cte=nodes_to_convert_to_cte,
+        override_nodes_to_convert_to_cte=nodes_to_convert_to_cte,
     )
     sql_plan_with_cte = conversion_result.sql_plan
     sql_with_cte = renderer.render_sql_query_plan(sql_plan_with_cte).sql
@@ -64,7 +63,6 @@ def convert_and_check(
         snapshot_id="result",
         snapshot_str=str(
             LazyFormat(
-                "Conversion Result",
                 initial_sql=initial_sql,
                 sql_with_cte=sql_with_cte,
             )

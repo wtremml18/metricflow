@@ -21,9 +21,11 @@ from metricflow.plan_conversion.dataflow_to_sql_cte import DataflowNodeToSqlCteV
 from metricflow.plan_conversion.dataflow_to_sql_subquery import DataflowNodeToSqlSubqueryVisitor
 from metricflow.protocols.sql_client import SqlEngine
 from metricflow.sql.optimizer.optimization_levels import (
+    SqlQueryGenerationOptionLookup,
+    SqlQueryGenerationOptionSet,
     SqlQueryOptimizationLevel,
-    SqlQueryOptimizerConfiguration,
 )
+from metricflow.sql.render.common_dataflow_branches import find_common_branches
 from metricflow.sql.sql_plan import (
     SqlQueryPlan,
     SqlQueryPlanNode,
@@ -69,22 +71,39 @@ class DataflowToSqlQueryPlanConverter:
         dataflow_plan_node: DataflowPlanNode,
         optimization_level: SqlQueryOptimizationLevel = SqlQueryOptimizationLevel.O4,
         sql_query_plan_id: Optional[DagId] = None,
-        nodes_to_convert_to_cte: FrozenSet[DataflowPlanNode] = frozenset(),
+        override_nodes_to_convert_to_cte: Optional[FrozenSet[DataflowPlanNode]] = None,
     ) -> ConvertToSqlPlanResult:
         """Create an SQL query plan that represents the computation up to the given dataflow plan node."""
-        logger.debug(LazyFormat("Converting to SQL", nodes_to_convert_to_cte=nodes_to_convert_to_cte))
-        to_sql_subquery_visitor = DataflowNodeToSqlSubqueryVisitor(
-            column_association_resolver=self.column_association_resolver,
-            semantic_manifest_lookup=self._semantic_manifest_lookup,
+        # TODO: Make this a more generally accessible attribute instead of checking against the
+        # BigQuery-ness of the engine
+        use_column_alias_in_group_by = sql_engine_type is SqlEngine.BIGQUERY
+
+        option_set = SqlQueryGenerationOptionLookup.options_for_level(
+            optimization_level, use_column_alias_in_group_by=use_column_alias_in_group_by
         )
 
-        if len(nodes_to_convert_to_cte) == 0:
+        dataflow_nodes_to_convert_to_cte = self._get_nodes_to_convert_to_cte(
+            dataflow_plan_node=dataflow_plan_node,
+            option_set=option_set,
+            override_nodes_to_convert_to_cte=override_nodes_to_convert_to_cte,
+        )
+
+        logger.debug(LazyFormat("Converting to SQL", nodes_to_convert_to_cte=override_nodes_to_convert_to_cte))
+
+        if len(dataflow_nodes_to_convert_to_cte) == 0:
+            # Avoid `DataflowNodeToSqlCteVisitor` code path for better isolation during rollout.
+            # Later this branch can be removed as `DataflowNodeToSqlCteVisitor` should handle an empty
+            # `dataflow_nodes_to_convert_to_cte`.
+            to_sql_subquery_visitor = DataflowNodeToSqlSubqueryVisitor(
+                column_association_resolver=self.column_association_resolver,
+                semantic_manifest_lookup=self._semantic_manifest_lookup,
+            )
             data_set = dataflow_plan_node.accept(to_sql_subquery_visitor)
         else:
             to_sql_cte_visitor = DataflowNodeToSqlCteVisitor(
                 column_association_resolver=self.column_association_resolver,
                 semantic_manifest_lookup=self._semantic_manifest_lookup,
-                nodes_to_convert_to_cte=nodes_to_convert_to_cte,
+                nodes_to_convert_to_cte=dataflow_nodes_to_convert_to_cte,
             )
             data_set = dataflow_plan_node.accept(to_sql_cte_visitor)
             select_statement = data_set.checked_sql_select_node
@@ -106,13 +125,8 @@ class DataflowToSqlQueryPlanConverter:
             )
 
         sql_node: SqlQueryPlanNode = data_set.sql_node
-        # TODO: Make this a more generally accessible attribute instead of checking against the
-        # BigQuery-ness of the engine
-        use_column_alias_in_group_by = sql_engine_type is SqlEngine.BIGQUERY
 
-        for optimizer in SqlQueryOptimizerConfiguration.optimizers_for_level(
-            optimization_level, use_column_alias_in_group_by=use_column_alias_in_group_by
-        ):
+        for optimizer in option_set.optimizers:
             logger.debug(LazyFormat(lambda: f"Applying optimizer: {optimizer.__class__.__name__}"))
             sql_node = optimizer.optimize(sql_node)
             logger.debug(
@@ -126,3 +140,17 @@ class DataflowToSqlQueryPlanConverter:
             instance_set=data_set.instance_set,
             sql_plan=SqlQueryPlan(render_node=sql_node, plan_id=sql_query_plan_id),
         )
+
+    def _get_nodes_to_convert_to_cte(
+        self,
+        dataflow_plan_node: DataflowPlanNode,
+        option_set: SqlQueryGenerationOptionSet,
+        override_nodes_to_convert_to_cte: Optional[FrozenSet[DataflowPlanNode]],
+    ) -> FrozenSet[DataflowPlanNode]:
+        if override_nodes_to_convert_to_cte is not None:
+            return override_nodes_to_convert_to_cte
+
+        if not option_set.use_cte:
+            return frozenset()
+
+        return frozenset(find_common_branches(dataflow_plan_node))
