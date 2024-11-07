@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from _pytest.fixtures import FixtureRequest
-from metricflow_semantics.mf_logging.pretty_print import mf_pformat_many
+from metricflow_semantics.mf_logging.pretty_print import mf_pformat_dict
 from metricflow_semantics.query.query_parser import MetricFlowQueryParser
 from metricflow_semantics.specs.column_assoc import ColumnAssociationResolver
 from metricflow_semantics.test_helpers.config_helpers import MetricFlowTestConfiguration
@@ -43,7 +43,7 @@ def test_shared_metric_query(
         request=request,
         mf_test_configuration=mf_test_configuration,
         snapshot_id="result",
-        snapshot_str=mf_pformat_many(
+        snapshot_str=mf_pformat_dict(
             description="Common branch leaf nodes",
             obj_dict=obj_dict,
             preserve_raw_strings=True,
