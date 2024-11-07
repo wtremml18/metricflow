@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
-from typing import FrozenSet, Optional
+from typing import FrozenSet, Optional, Set
 
+from dbt_semantic_interfaces.enum_extension import assert_values_exhausted
 from metricflow_semantics.dag.mf_dag import DagId
 from metricflow_semantics.mf_logging.formatting import indent
 from metricflow_semantics.mf_logging.lazy_formattable import LazyFormat
@@ -21,6 +22,7 @@ from metricflow.plan_conversion.dataflow_to_sql_cte import DataflowNodeToSqlCteV
 from metricflow.plan_conversion.dataflow_to_sql_subquery import DataflowNodeToSqlSubqueryVisitor
 from metricflow.protocols.sql_client import SqlEngine
 from metricflow.sql.optimizer.optimization_levels import (
+    DataflowPlanNodeProperty,
     SqlQueryGenerationOptionLookup,
     SqlQueryGenerationOptionSet,
     SqlQueryOptimizationLevel,
@@ -147,10 +149,16 @@ class DataflowToSqlQueryPlanConverter:
         option_set: SqlQueryGenerationOptionSet,
         override_nodes_to_convert_to_cte: Optional[FrozenSet[DataflowPlanNode]],
     ) -> FrozenSet[DataflowPlanNode]:
+        """Handles logic for selecting which nodes to convert to CTEs based on the request."""
         if override_nodes_to_convert_to_cte is not None:
             return override_nodes_to_convert_to_cte
 
-        if not option_set.use_cte:
-            return frozenset()
+        nodes_to_convert_to_cte: Set[DataflowPlanNode] = set()
 
-        return frozenset(find_common_branches(dataflow_plan_node))
+        for dataflow_plan_node_property in option_set.node_properties_for_cte_conversion:
+            if dataflow_plan_node_property is DataflowPlanNodeProperty.COMMON_NODES:
+                nodes_to_convert_to_cte.update(find_common_branches(dataflow_plan_node))
+            else:
+                assert_values_exhausted(dataflow_plan_node_property)
+
+        return frozenset(nodes_to_convert_to_cte)

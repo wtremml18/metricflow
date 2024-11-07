@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Tuple
+from typing import FrozenSet, Tuple
 
 from dbt_semantic_interfaces.enum_extension import assert_values_exhausted
 
@@ -24,12 +24,21 @@ class SqlQueryOptimizationLevel(Enum):
     O5 = "O5"
 
 
+class DataflowPlanNodeProperty(Enum):
+    """Describes the nodes in the dataflow plan that should be made into CTEs."""
+
+    # (identical) nodes that appear multiple times in the dataflow plan.
+    COMMON_NODES = "common_nodes"
+
+
 @dataclass(frozen=True)
 class SqlQueryGenerationOptionSet:
     """Describe the options for generate SQL from the dataflow plan."""
 
     optimizers: Tuple[SqlQueryPlanOptimizer, ...]
-    use_cte: bool
+
+    # Convert nodes in the dataflow plan that match these properties to CTEs.
+    node_properties_for_cte_conversion: FrozenSet[DataflowPlanNodeProperty]
 
 
 class SqlQueryGenerationOptionLookup:
@@ -40,7 +49,7 @@ class SqlQueryGenerationOptionLookup:
         level: SqlQueryOptimizationLevel, use_column_alias_in_group_by: bool
     ) -> SqlQueryGenerationOptionSet:
         optimizers: Tuple[SqlQueryPlanOptimizer, ...] = ()
-        use_cte = False
+        node_to_cte_selections: FrozenSet[DataflowPlanNodeProperty] = frozenset()
         if level is SqlQueryOptimizationLevel.O0:
             pass
         elif level is SqlQueryOptimizationLevel.O1:
@@ -61,11 +70,13 @@ class SqlQueryGenerationOptionLookup:
                 SqlRewritingSubQueryReducer(use_column_alias_in_group_bys=use_column_alias_in_group_by),
                 SqlTableAliasSimplifier(),
             )
-            use_cte = True
+            node_to_cte_selections = frozenset([DataflowPlanNodeProperty.COMMON_NODES])
         else:
             assert_values_exhausted(level)
 
-        return SqlQueryGenerationOptionSet(optimizers=optimizers, use_cte=use_cte)
+        return SqlQueryGenerationOptionSet(
+            optimizers=optimizers, node_properties_for_cte_conversion=node_to_cte_selections
+        )
 
     # @staticmethod
     # def optimizers_for_level(

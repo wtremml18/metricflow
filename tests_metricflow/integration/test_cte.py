@@ -5,7 +5,7 @@ import logging
 from _pytest.fixtures import FixtureRequest
 from metricflow_semantics.test_helpers.config_helpers import MetricFlowTestConfiguration
 
-from metricflow.engine.metricflow_engine import MetricFlowExplainResult, MetricFlowQueryRequest
+from metricflow.engine.metricflow_engine import MetricFlowQueryRequest
 from tests_metricflow.integration.conftest import IntegrationTestHelpers
 
 logger = logging.getLogger(__name__)
