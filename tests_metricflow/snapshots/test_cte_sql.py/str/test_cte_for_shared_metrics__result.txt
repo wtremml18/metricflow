@@ -17,7 +17,7 @@ initial_sql:
       SELECT
         DATE_TRUNC('day', ds) AS metric_time__day
         , 1 AS bookings
-      FROM mf_test_2024_11_07_29mfomsb.fct_bookings bookings_source_src_28000
+      FROM mf_test_2024_11_07_snbetv28.fct_bookings bookings_source_src_28000
     ) subq_2
     GROUP BY
       metric_time__day
@@ -41,7 +41,7 @@ initial_sql:
         SELECT
           DATE_TRUNC('day', ds) AS metric_time__day
           , 1 AS bookings
-        FROM mf_test_2024_11_07_29mfomsb.fct_bookings bookings_source_src_28000
+        FROM mf_test_2024_11_07_snbetv28.fct_bookings bookings_source_src_28000
       ) subq_7
       GROUP BY
         metric_time__day
@@ -55,7 +55,7 @@ initial_sql:
       SELECT
         DATE_TRUNC('day', ds) AS metric_time__day
         , COUNT(DISTINCT guest_id) AS bookers
-      FROM mf_test_2024_11_07_29mfomsb.fct_bookings bookings_source_src_28000
+      FROM mf_test_2024_11_07_snbetv28.fct_bookings bookings_source_src_28000
       GROUP BY
         DATE_TRUNC('day', ds)
     ) subq_14
@@ -77,7 +77,7 @@ sql_with_cte:
       DATE_TRUNC('day', ds) AS metric_time__day
       , 1 AS bookings
       , guest_id AS bookers
-    FROM mf_test_2024_11_07_29mfomsb.fct_bookings bookings_source_src_28000
+    FROM mf_test_2024_11_07_snbetv28.fct_bookings bookings_source_src_28000
   )
 
   , cte_2 AS (

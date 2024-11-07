@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import FrozenSet, Mapping
 
 from _pytest.fixtures import FixtureRequest
@@ -23,6 +24,8 @@ from metricflow.sql.optimizer.optimization_levels import SqlQueryOptimizationLev
 from metricflow.sql.render.common_dataflow_branches import find_common_branches
 from metricflow.sql.render.sql_plan_renderer import DefaultSqlQueryPlanRenderer
 from tests_metricflow.fixtures.manifest_fixtures import MetricFlowEngineTestFixture, SemanticManifestSetup
+
+logger = logging.getLogger(__name__)
 
 
 def convert_and_check(
@@ -70,7 +73,7 @@ def convert_and_check(
     )
 
 
-def test_use_cte_for_simple_dataflow_plan(
+def test_cte_for_simple_dataflow_plan(
     request: FixtureRequest,
     mf_test_configuration: MetricFlowTestConfiguration,
     dataflow_to_sql_converter: DataflowToSqlQueryPlanConverter,
