@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import FrozenSet, Optional
 
 from metricflow_semantics.dag.mf_dag import DagId
 from metricflow_semantics.mf_logging.formatting import indent
@@ -15,7 +15,9 @@ from metricflow_semantics.time.time_spine_source import TimeSpineSource
 from metricflow.dataflow.dataflow_plan import (
     DataflowPlanNode,
 )
+from metricflow.dataset.sql_dataset import SqlDataSet
 from metricflow.plan_conversion.convert_to_sql_plan import ConvertToSqlPlanResult
+from metricflow.plan_conversion.dataflow_to_sql_cte import DataflowNodeToSqlCteVisitor
 from metricflow.plan_conversion.dataflow_to_sql_subquery import DataflowNodeToSqlSubqueryVisitor
 from metricflow.protocols.sql_client import SqlEngine
 from metricflow.sql.optimizer.optimization_levels import (
@@ -25,6 +27,7 @@ from metricflow.sql.optimizer.optimization_levels import (
 from metricflow.sql.sql_plan import (
     SqlQueryPlan,
     SqlQueryPlanNode,
+    SqlSelectStatementNode,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,13 +69,41 @@ class DataflowToSqlQueryPlanConverter:
         dataflow_plan_node: DataflowPlanNode,
         optimization_level: SqlQueryOptimizationLevel = SqlQueryOptimizationLevel.O4,
         sql_query_plan_id: Optional[DagId] = None,
+        nodes_to_convert_to_cte: FrozenSet[DataflowPlanNode] = frozenset(),
     ) -> ConvertToSqlPlanResult:
         """Create an SQL query plan that represents the computation up to the given dataflow plan node."""
-        to_sql_visitor = DataflowNodeToSqlSubqueryVisitor(
+        logger.debug(LazyFormat("Converting to SQL", nodes_to_convert_to_cte=nodes_to_convert_to_cte))
+        to_sql_subquery_visitor = DataflowNodeToSqlSubqueryVisitor(
             column_association_resolver=self.column_association_resolver,
             semantic_manifest_lookup=self._semantic_manifest_lookup,
         )
-        data_set = dataflow_plan_node.accept(to_sql_visitor)
+
+        if len(nodes_to_convert_to_cte) == 0:
+            data_set = dataflow_plan_node.accept(to_sql_subquery_visitor)
+        else:
+            to_sql_cte_visitor = DataflowNodeToSqlCteVisitor(
+                column_association_resolver=self.column_association_resolver,
+                semantic_manifest_lookup=self._semantic_manifest_lookup,
+                nodes_to_convert_to_cte=nodes_to_convert_to_cte,
+            )
+            data_set = dataflow_plan_node.accept(to_sql_cte_visitor)
+            select_statement = data_set.checked_sql_select_node
+            data_set = SqlDataSet(
+                instance_set=data_set.instance_set,
+                sql_select_node=SqlSelectStatementNode.create(
+                    description=select_statement.description,
+                    select_columns=select_statement.select_columns,
+                    from_source=select_statement.from_source,
+                    from_source_alias=select_statement.from_source_alias,
+                    cte_sources=tuple(to_sql_cte_visitor.generated_cte_nodes()),
+                    join_descs=select_statement.join_descs,
+                    group_bys=select_statement.group_bys,
+                    order_bys=select_statement.order_bys,
+                    where=select_statement.where,
+                    limit=select_statement.limit,
+                    distinct=select_statement.distinct,
+                ),
+            )
 
         sql_node: SqlQueryPlanNode = data_set.sql_node
         # TODO: Make this a more generally accessible attribute instead of checking against the

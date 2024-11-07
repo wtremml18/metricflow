@@ -800,7 +800,7 @@ class DataflowNodeToSqlSubqueryVisitor(DataflowPlanNodeVisitor[SqlDataSet]):
             sql_select_node=SqlSelectStatementNode.create(
                 description=node.description,
                 select_columns=select_columns,
-                from_source=from_data_set.checked_sql_select_node,
+                from_source=from_data_set.sql_node,
                 from_source_alias=from_data_set_alias,
                 group_bys=group_bys,
             ),
