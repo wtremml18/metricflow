@@ -106,7 +106,7 @@ class DuckDbSqlExpressionRenderer(DefaultSqlExpressionRenderer):
         )
 
 
-class DuckDbSqlQueryPlanRenderer(DefaultSqlPlanRenderer):
+class DuckDbSqlPlanRenderer(DefaultSqlPlanRenderer):
     """Plan renderer for the DuckDB engine."""
 
     EXPR_RENDERER = DuckDbSqlExpressionRenderer()
