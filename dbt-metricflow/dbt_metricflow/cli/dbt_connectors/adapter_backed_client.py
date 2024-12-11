@@ -120,7 +120,7 @@ class AdapterBackedSqlClient:
         return self._sql_engine_type
 
     @property
-    def sql_query_plan_renderer(self) -> SqlPlanRenderer:
+    def sql_plan_renderer(self) -> SqlPlanRenderer:
         """Dialect-specific SQL query plan renderer used for converting MetricFlow's query plan to executable SQL."""
         return self._sql_plan_renderer
 
