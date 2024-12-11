@@ -149,8 +149,8 @@ from metricflow.sql.sql_plan import (
 logger = logging.getLogger(__name__)
 
 
-class DataflowToSqlQueryPlanConverter:
-    """Generates an SQL query plan from a node in the metric dataflow plan."""
+class DataflowToSqlPlanConverter:
+    """Generates an SQL plan from a node in the metric dataflow plan."""
 
     def __init__(
         self,
