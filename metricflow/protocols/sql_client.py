@@ -67,7 +67,7 @@ class SqlClient(Protocol):
 
     @property
     @abstractmethod
-    def sql_query_plan_renderer(self) -> SqlPlanRenderer:
+    def sql_plan_renderer(self) -> SqlPlanRenderer:
         """Dialect-specific SQL query plan renderer used for converting MetricFlow's query plan to executable SQL.
 
         This is bundled with the SqlClient partly as a convenenience for accessing a single instance of the renderer,
