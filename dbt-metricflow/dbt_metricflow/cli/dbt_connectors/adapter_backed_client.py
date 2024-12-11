@@ -109,7 +109,7 @@ class AdapterBackedSqlClient:
             ) from e
 
         self._sql_engine_type = adapter_type.sql_engine_type
-        self._sql_query_plan_renderer = adapter_type.sql_query_plan_renderer
+        self._sql_plan_renderer = adapter_type.sql_query_plan_renderer
         logger.debug(
             LazyFormat(lambda: f"Initialized AdapterBackedSqlClient with dbt adapter type `{adapter_type.value}`")
         )
@@ -122,7 +122,7 @@ class AdapterBackedSqlClient:
     @property
     def sql_query_plan_renderer(self) -> SqlQueryPlanRenderer:
         """Dialect-specific SQL query plan renderer used for converting MetricFlow's query plan to executable SQL."""
-        return self._sql_query_plan_renderer
+        return self._sql_plan_renderer
 
     def query(
         self,
