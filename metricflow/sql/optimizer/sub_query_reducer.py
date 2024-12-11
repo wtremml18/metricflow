@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from typing_extensions import override
 
-from metricflow.sql.optimizer.sql_query_plan_optimizer import SqlQueryPlanOptimizer
+from metricflow.sql.optimizer.sql_query_plan_optimizer import SqlPlanOptimizer
 from metricflow.sql.sql_exprs import SqlColumnReference, SqlColumnReferenceExpression
 from metricflow.sql.sql_plan import (
     SqlCreateTableAsNode,
@@ -208,7 +208,7 @@ class SqlSubQueryReducerVisitor(SqlPlanNodeVisitor[SqlPlanNode]):
         )
 
 
-class SqlSubQueryReducer(SqlQueryPlanOptimizer):
+class SqlSubQueryReducer(SqlPlanOptimizer):
     """Simplify queries by eliminating sub-queries when possible.
 
     e.g. from
