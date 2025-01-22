@@ -42,7 +42,9 @@ class WhereFilterPatternFactory(ABC):
 
     @abstractmethod
     def create_for_metric_call_parameter_set(  # noqa: D102
-        self, metric_call_parameter_set: MetricCallParameterSet
+        self, 
+        metric_call_parameter_set: MetricCallParameterSet,
+        parent_time_spec: Optional[TimeDimensionSpec] = None
     ) -> SpecPattern:
         raise NotImplementedError
 
@@ -67,5 +69,15 @@ class DefaultWhereFilterPatternFactory(WhereFilterPatternFactory):
         return EntityPattern.from_call_parameter_set(entity_call_parameter_set)
 
     @override
-    def create_for_metric_call_parameter_set(self, metric_call_parameter_set: MetricCallParameterSet) -> SpecPattern:
-        return GroupByMetricPattern.from_call_parameter_set(metric_call_parameter_set)
+    def create_for_metric_call_parameter_set(
+        self,
+        metric_call_parameter_set: MetricCallParameterSet,
+        parent_time_spec: Optional[TimeDimensionSpec] = None,
+    ) -> SpecPattern:
+        """
+        Extended to pass `parent_time_spec` so metric filters can adopt the parent's time dimension if unspecified.
+        """
+        return GroupByMetricPattern.from_call_parameter_set(
+            metric_call_parameter_set,
+            parent_time_spec=parent_time_spec,
+        )

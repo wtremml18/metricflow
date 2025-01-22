@@ -57,6 +57,7 @@ from metricflow_semantics.query.issues.issues_base import (
 from metricflow_semantics.query.suggestion_generator import QueryItemSuggestionGenerator
 from metricflow_semantics.specs.patterns.none_date_part import NoneDatePartPattern
 from metricflow_semantics.specs.patterns.spec_pattern import SpecPattern
+from metricflow_semantics.specs.patterns.metric_time_default_granularity import MetricTimeDefaultGranularityPattern
 
 if typing.TYPE_CHECKING:
     from metricflow_semantics.query.group_by_item.group_by_item_resolver import GroupByItemResolver
@@ -336,7 +337,20 @@ class _PushDownGroupByItemCandidatesVisitor(GroupByItemResolutionNodeVisitor[Pus
             if merged_result_from_parents.candidate_set.is_empty:
                 return merged_result_from_parents
 
+            # If this metric is defined as an input metric in a derived metric, ensure we adopt the parent's time dimension.
+            # This allows the child's metric filter to keep multiple group-by items if parent's time is not overridden.
             metric = self._semantic_manifest_lookup.metric_lookup.get_metric(node.metric_reference)
+            
+            if node.metric_input_location and self._filter_location:
+                # Here, if the filter references an input metric location,
+                # we unify the parent's max default time or the parent's already-chosen dimension.
+                parent_metric_ref = node.metric_input_location.derived_metric_reference
+                parent_metric = self._semantic_manifest_lookup.metric_lookup.get_metric(parent_metric_ref)
+                if parent_metric.time_granularity:
+                    # unify parent's granularity
+                    merged_result_from_parents = merged_result_from_parents.filter_candidates_by_pattern(
+                        MetricTimeDefaultGranularityPattern(parent_metric.time_granularity)
+                    )
 
             # For metrics with offset_to_grain, don't allow date_part group-by-items
             patterns_to_apply: Sequence[SpecPattern] = ()

@@ -31,6 +31,8 @@ from metricflow_semantics.test_helpers.example_project_configuration import (
 )
 from metricflow_semantics.test_helpers.metric_time_dimension import MTD
 from metricflow_semantics.test_helpers.snapshot_helpers import assert_object_snapshot_equal, assert_str_snapshot_equal
+from dbt_semantic_interfaces.naming.keywords import METRIC_TIME_ELEMENT_NAME
+
 
 logger = logging.getLogger(__name__)
 

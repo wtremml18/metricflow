@@ -30,6 +30,7 @@ from metricflow_semantics.specs.patterns.typed_patterns import (
 )
 from metricflow_semantics.specs.time_dimension_spec import TimeDimensionSpec
 from metricflow_semantics.time.granularity import ExpandedTimeGranularity
+from dbt_semantic_interfaces.naming.keywords import METRIC_TIME_ELEMENT_NAME
 
 logger = logging.getLogger(__name__)
 
